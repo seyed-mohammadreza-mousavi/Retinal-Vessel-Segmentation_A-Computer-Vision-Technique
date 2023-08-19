@@ -44,11 +44,11 @@ from tensorflow.keras.layers import AveragePooling2D,Conv2DTranspose,Input,Add,C
 
 %matplotlib inline
 
-patch_size=48        # patch image size (图像块大小)
-patch_num=1000        # sample number of one training image  (每张训练图像采样的图像块数量)
-patch_threshold=25   # threshold for the patch, the smaller threshoold, the less vessel in the patch (采样阈值，数值越小，图像块内的血管面积越小)
+patch_size=48        # patch image size 
+patch_num=1000        # sample number of one training image  
+patch_threshold=25   # threshold for the patch, the smaller threshoold, the less vessel in the patch 
 TRAIN_OR_VAL=0.7
-dataset_path='DRIVE/'   # modify the dataset_path to your own dir（将dataset_path修改至你自己的路径）
+dataset_path='DRIVE/'   # modify the dataset_path to your own dir
 
 train_dir=dataset_path+"training/"
 test_dir=dataset_path+"test/"
@@ -149,9 +149,9 @@ def image2patch(image_path,patch_num,patch_size,training=True,show=True):
   sample_count=0
   sample_index=0
   
-  sample_point=np.where(groundtruth==1)     # generate sample point (生成采样中心点)
+  sample_point=np.where(groundtruth==1)     # generate sample point 
 
-  state = np.random.get_state()      # shuffle the coord (打乱顺序，模拟随机采样)
+  state = np.random.get_state()      # shuffle the coord 
   np.random.shuffle(sample_point[0])
   np.random.set_state(state)
   np.random.shuffle(sample_point[1])
@@ -166,7 +166,7 @@ def image2patch(image_path,patch_num,patch_size,training=True,show=True):
        
         patch_image_binary=image[x-patch_size//2:x+patch_size//2,y-patch_size//2:y+patch_size//2,:]   # patch image
         patch_groundtruth=groundtruth[x-patch_size//2:x+patch_size//2,y-patch_size//2:y+patch_size//2]       # patch mask
-        #patch_image_binary=np.asarray(0.25*patch_image[:,:,2]+0.75*patch_image[:,:,1])         # B*0.25+G*0.75, which enhance the vessel (增强血管的对比度)
+        #patch_image_binary=np.asarray(0.25*patch_image[:,:,2]+0.75*patch_image[:,:,1])         # B*0.25+G*0.75, which enhance the vessel 
         patch_groundtruth=np.where(patch_groundtruth>0,255,0)
     
         #patch_image_binary =cv2.equalizeHist((patch_image_binary*255.0).astype(np.uint8))/255.0
@@ -178,13 +178,13 @@ def image2patch(image_path,patch_num,patch_size,training=True,show=True):
           cv2.rectangle(groundtruth_show, (y-patch_size//2,x-patch_size//2,), (y+patch_size//2,x+patch_size//2), (0,1,0), 2)
         sample_count+=1
     
-    if show:                                 # visualize the sample process(可视化采样过程，会很慢！)
+    if show:                                 # visualize the sample process
       plt.figure(figsize=(15,15))
       plt.title("processing: %s"%image_name)
       plt.subplot(121)
       plt.imshow(image_show,cmap=plt.cm.gray)   # processd image
       plt.subplot(122)
-      plt.imshow(groundtruth_show,cmap=plt.cm.gray)  #groundtruth of the image, patch is showed as the green square (绿色的方框表示采样的图像块)
+      plt.imshow(groundtruth_show,cmap=plt.cm.gray)  #groundtruth of the image, patch is showed as the green square 
       plt.show()
       display.clear_output(wait=True)
     sample_index+=1
@@ -199,7 +199,7 @@ def image2patch(image_path,patch_num,patch_size,training=True,show=True):
         #print(patch_mask_list[i])
         plt.imsave(train_patch_dir+image_name+"_"+str(i)+"_val_groundtruth.jpg",(patch_groundtruth_list[i]/225.0).astype(np.uint8),cmap = plt.cm.gray)
 
-# delete original patch images (删除已有的图像块数据)
+# delete original patch images 
 if not os.path.exists(train_patch_dir):
   os.mkdir(train_patch_dir)
 else:
@@ -209,7 +209,7 @@ else:
 if not os.path.exists(test_save_dir):
   os.mkdir(test_save_dir)
     
-# generate patch images (生成图像块数据)
+# generate patch images 
 for i in tqdm(range(len(train_image_path_list)),desc="Generate the training patches: "):
   image2patch(train_image_path_list[i],patch_num,patch_size,training=True,show=False)  # set show=True to visualize the sample process, which is much slower than show=False
 
@@ -422,7 +422,7 @@ train_patch_img_path_list=sorted(glob(train_patch_dir+"*-*-img.jpg"))
 train_patch_groundtruth_path_list=sorted(glob(train_patch_dir+"*-*-groundtruth.jpg"))
 train_patch_img_path_list,train_patch_groundtruth_path_list=shuffle(train_patch_img_path_list,train_patch_groundtruth_path_list,random_state=0)
 
-# make sure that img-list and mask-list is in order (确保打乱后的image-mask还是对应的) 
+# make sure that img-list and mask-list is in order 
 print(len(train_patch_img_path_list),len(train_patch_groundtruth_path_list))
 print(train_patch_img_path_list[:2])
 print(train_patch_groundtruth_path_list[:2])
@@ -445,14 +445,14 @@ val_dataset =val_dataset.shuffle(buffer_size=1300).prefetch(BATCH_SIZE).batch(BA
 
 model=Unet()
 
-# Learning rate and optimizer （学习率调整和优化器）
+# Learning rate and optimizer 
 cosine_decay = tf.keras.experimental.CosineDecayRestarts(initial_learning_rate=LR, first_decay_steps=12000,t_mul=1000,m_mul=0.5,alpha=1e-5)
 optimizer=tf.keras.optimizers.Adam(learning_rate=cosine_decay)
 
-# loss function （损失函数）
+# loss function 
 loss=tf.keras.losses.BinaryCrossentropy(from_logits=False)
 
-# metric record （性能指标记录器）
+# metric record 
 train_loss = tf.keras.metrics.Mean(name='train_loss')
 train_acc=tf.keras.metrics.Mean(name='train_acc')
 current_accuracy = tf.keras.metrics.BinaryAccuracy(name='train_accuracy')
@@ -461,12 +461,12 @@ val_loss = tf.keras.metrics.Mean(name='val_loss')
 val_acc=tf.keras.metrics.Mean(name='val_acc')
 val_accuracy = tf.keras.metrics.BinaryAccuracy(name='val_accuracy')
 
-# checkpoint （模型存档管理器）
+# checkpoint 
 ckpt = tf.train.Checkpoint(model=model)
 #ckpt_manager = tf.train.CheckpointManager(ckpt, checkpoint_path, max_to_keep=3)
 #ckpt.restore(tf.train.latest_checkpoint(checkpoint_path))
 
-# tensorboard writer （Tensorboard记录器）
+# tensorboard writer （Tensorboard）
 log_dir=log_path+ datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 log_writer = tf.summary.create_file_writer(log_dir)
 
@@ -476,12 +476,12 @@ def train_step(step,patch,groundtruth):
     linear,pred_seg=model(patch,training=True)
     losses = dice_loss(groundtruth, pred_seg)
     
-  # calculate the gradient （求梯度）
+  # calculate the gradient 
   grads = tape.gradient(losses, model.trainable_variables)
-  # bp (反向传播) 
+  # bp 
   optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
-  # record the training loss and accuracy (记录loss和准确率)
+  # record the training loss and accuracy (loss)
   train_loss.update_state(losses)
   train_acc.update_state(dice(groundtruth, pred_seg))
 
@@ -492,7 +492,7 @@ def val_step(step,patch,groundtruth):
   linear,pred_seg=model(patch,training=False)
   losses = dice_loss(groundtruth, pred_seg)
     
-  # record the val loss and accuracy (记录loss和准确率)
+  # record the val loss and accuracy (loss)
   val_loss.update_state(losses)
   val_acc.update_state(dice(groundtruth, pred_seg))
   
@@ -517,13 +517,13 @@ lr_step=0
 last_val_loss=2e10
 with log_writer.as_default():
   for epoch in range(EPOCHS):
-    # renew the recorder （重置记录项）
+    # renew the recorder 
     train_loss.reset_states()
     train_acc.reset_states()
     val_loss.reset_states()
     val_acc.reset_states()
   
-    # training （训练部分）
+    # training 
     for tstep, (patch,groundtruth) in enumerate(train_dataset):
       train_step(lr_step,patch,groundtruth)
     

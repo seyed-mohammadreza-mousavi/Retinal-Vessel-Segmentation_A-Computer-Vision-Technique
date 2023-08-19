@@ -1,7 +1,7 @@
-from google.colab import drive
-drive.mount('/content/drive')
+#from google.colab import drive
+#drive.mount('/content/drive')
 
-!cp drive/MyDrive/Colab/vision_ds/DRIVE ./ -R
+#!cp drive/MyDrive/Colab/vision_ds/DRIVE ./ -R
 
 #!ls DRIVE/trainin/
 

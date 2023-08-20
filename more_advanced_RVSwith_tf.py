@@ -44,9 +44,9 @@ from tensorflow.keras.layers import AveragePooling2D,Conv2DTranspose,Input,Add,C
 
 %matplotlib inline
 
-patch_size=48        # patch image size 
-patch_num=1000        # sample number of one training image  
-patch_threshold=25   # threshold for the patch, the smaller threshoold, the less vessel in the patch 
+patch_size=48        # patch image size
+patch_num=1000        # sample number of one training image
+patch_threshold=25   # threshold for the patch, the smaller threshoold, the less vessel in the patch
 TRAIN_OR_VAL=0.7
 dataset_path='DRIVE/'   # modify the dataset_path to your own dir
 
@@ -108,13 +108,13 @@ def adjust_gamma(imgs, gamma=1.0):
   return new_imgs
 
 def preprocess(image,mask):
-  
+
   assert np.max(mask)==1
   image=np.array(image)
   image[:,:,0]=image[:,:,0]*mask
   image[:,:,1]=image[:,:,1]*mask
   image[:,:,2]=image[:,:,2]*mask
-  
+
   image=restrict_normalized(image,mask)
   image=clahe_equalized(image)
   image=adjust_gamma(image,1.2)
@@ -136,9 +136,9 @@ def image2patch(image_path,patch_num,patch_size,training=True,show=True):
 
   mask=plt.imread(train_mask_dir+image_name+"_training_mask.gif")
   mask=np.where(mask>0,1,0)
-  
+
   image=preprocess(image,mask)
-  #image_binary=0.8*image[:,:,1]+0.2*image[:,:,2]  
+  #image_binary=0.8*image[:,:,1]+0.2*image[:,:,2]
 
   image_show=image.copy()
   groundtruth_show=np.zeros_like(image)
@@ -148,10 +148,10 @@ def image2patch(image_path,patch_num,patch_size,training=True,show=True):
 
   sample_count=0
   sample_index=0
-  
-  sample_point=np.where(groundtruth==1)     # generate sample point 
 
-  state = np.random.get_state()      # shuffle the coord 
+  sample_point=np.where(groundtruth==1)     # generate sample point
+
+  state = np.random.get_state()      # shuffle the coord
   np.random.shuffle(sample_point[0])
   np.random.set_state(state)
   np.random.shuffle(sample_point[1])
@@ -163,28 +163,28 @@ def image2patch(image_path,patch_num,patch_size,training=True,show=True):
     x,y=sample_point[0][sample_index],sample_point[1][sample_index]
     if check_coord(x,y,image.shape[0],image.shape[1],patch_size):
       if np.sum(mask[x-patch_size//2:x+patch_size//2,y-patch_size//2:y+patch_size//2])>patch_threshold:     #select according to the threshold
-       
+
         patch_image_binary=image[x-patch_size//2:x+patch_size//2,y-patch_size//2:y+patch_size//2,:]   # patch image
         patch_groundtruth=groundtruth[x-patch_size//2:x+patch_size//2,y-patch_size//2:y+patch_size//2]       # patch mask
-        #patch_image_binary=np.asarray(0.25*patch_image[:,:,2]+0.75*patch_image[:,:,1])         # B*0.25+G*0.75, which enhance the vessel 
+        #patch_image_binary=np.asarray(0.25*patch_image[:,:,2]+0.75*patch_image[:,:,1])         # B*0.25+G*0.75, which enhance the vessel
         patch_groundtruth=np.where(patch_groundtruth>0,255,0)
-    
+
         #patch_image_binary =cv2.equalizeHist((patch_image_binary*255.0).astype(np.uint8))/255.0
-        
+
         patch_image_list.append(patch_image_binary)    # patch image
         patch_groundtruth_list.append(patch_groundtruth)             # patch mask
         if show:
           cv2.rectangle(image_show, (y-patch_size//2,x-patch_size//2,), (y+patch_size//2,x+patch_size//2), (0,1,0), 2)  #draw the illustration
           cv2.rectangle(groundtruth_show, (y-patch_size//2,x-patch_size//2,), (y+patch_size//2,x+patch_size//2), (0,1,0), 2)
         sample_count+=1
-    
+
     if show:                                 # visualize the sample process
       plt.figure(figsize=(15,15))
       plt.title("processing: %s"%image_name)
       plt.subplot(121)
       plt.imshow(image_show,cmap=plt.cm.gray)   # processd image
       plt.subplot(122)
-      plt.imshow(groundtruth_show,cmap=plt.cm.gray)  #groundtruth of the image, patch is showed as the green square 
+      plt.imshow(groundtruth_show,cmap=plt.cm.gray)  #groundtruth of the image, patch is showed as the green square
       plt.show()
       display.clear_output(wait=True)
     sample_index+=1
@@ -199,17 +199,17 @@ def image2patch(image_path,patch_num,patch_size,training=True,show=True):
         #print(patch_mask_list[i])
         plt.imsave(train_patch_dir+image_name+"_"+str(i)+"_val_groundtruth.jpg",(patch_groundtruth_list[i]/225.0).astype(np.uint8),cmap = plt.cm.gray)
 
-# delete original patch images 
+# delete original patch images
 if not os.path.exists(train_patch_dir):
   os.mkdir(train_patch_dir)
 else:
   shutil.rmtree(train_patch_dir)
-  os.mkdir(train_patch_dir)    
+  os.mkdir(train_patch_dir)
 
 if not os.path.exists(test_save_dir):
   os.mkdir(test_save_dir)
-    
-# generate patch images 
+
+# generate patch images
 for i in tqdm(range(len(train_image_path_list)),desc="Generate the training patches: "):
   image2patch(train_image_path_list[i],patch_num,patch_size,training=True,show=False)  # set show=True to visualize the sample process, which is much slower than show=False
 
@@ -230,7 +230,7 @@ class LinearTransform(tf.keras.Model):
     self.pool_rc=AveragePooling2D(pool_size=(patch_size,patch_size),strides=1)
     self.pool_gc=AveragePooling2D(pool_size=(patch_size,patch_size),strides=1)
     self.pool_bc=AveragePooling2D(pool_size=(patch_size,patch_size),strides=1)
-        
+
     self.bn=BatchNormalization()
     self.sigmoid=Activation('sigmoid')
     self.softmax=Activation('softmax')
@@ -264,20 +264,20 @@ class ResBlock(tf.keras.Model):
   def __init__(self,out_ch,residual_path=False,stride=1):
     super(ResBlock,self).__init__(self)
     self.residual_path=residual_path
-        
+
     self.conv1=Conv2D(out_ch,kernel_size=3,strides=stride,padding='same', use_bias=False,data_format="channels_last")
     self.bn1=BatchNormalization()
     self.relu1=LeakyReLU()#Activation('leaky_relu')
-        
+
     self.conv2=Conv2D(out_ch,kernel_size=3,strides=1,padding='same', use_bias=False,data_format="channels_last")
     self.bn2=BatchNormalization()
-        
+
     if residual_path:
       self.conv_shortcut=Conv2D(out_ch,kernel_size=1,strides=stride,padding='same',use_bias=False)
       self.bn_shortcut=BatchNormalization()
-        
+
     self.relu2=LeakyReLU()#Activation('leaky_relu')
-        
+
   def call(self,x,training=True):
     xs=self.relu1(self.bn1(self.conv1(x),training=training))
     xs=self.bn2(self.conv2(xs),training=training)
@@ -296,7 +296,7 @@ class Unet(tf.keras.Model):
     self.resinit=ResBlock(16,residual_path=True)
     self.up_sample=UpSampling2D(size=(2,2),interpolation='bilinear')
     self.resup=ResBlock(32,residual_path=True)
-    
+
     self.pool1=MaxPool2D(pool_size=(2,2))
 
     self.resblock_down1=ResBlock(64,residual_path=True)
@@ -323,13 +323,13 @@ class Unet(tf.keras.Model):
 
     self.unpool1=UpSampling2D(size=(2,2),interpolation='bilinear')
     self.resblock_up1=ResBlock(64,residual_path=True)
-    
+
     self.unpool_final=UpSampling2D(size=(2,2),interpolation='bilinear')
     self.resblock2=ResBlock(32,residual_path=True)
-    
+
     self.pool_final=MaxPool2D(pool_size=(2,2))
     self.resfinal=ResBlock(32)
-    
+
     self.conv_final=Conv2D(1,kernel_size=1,strides=1,padding='same',use_bias=False)
     self.bn_final=BatchNormalization()
     self.act=Activation('sigmoid')
@@ -339,7 +339,7 @@ class Unet(tf.keras.Model):
     x=self.resinit(x_linear,training=training)
     x=self.up_sample(x)
     x=self.resup(x,training=training)
-    
+
     stage1=self.pool1(x)
     stage1=self.resblock_down1(stage1,training=training)
     stage1=self.resblock_down11(stage1,training=training)
@@ -365,15 +365,15 @@ class Unet(tf.keras.Model):
 
     stage1=Concatenate(axis=3)([stage1,self.unpool1(stage2)])
     stage1=self.resblock_up1(stage1,training=training)
-    
+
     x=Concatenate(axis=3)([x,self.unpool_final(stage1)])
     x=self.resblock2(x,training=training)
-    
+
     x=self.pool_final(x)
     x=self.resfinal(x,training=training)
-    
+
     seg_result=self.act(self.bn_final(self.conv_final(x),training=training))
-    
+
     return x_linear,seg_result
 
 EPOCHS=200
@@ -397,7 +397,7 @@ def load_image_groundtruth(img_path,groundtruth_path):
 
   groundtruth=tf.io.read_file(groundtruth_path)
   groundtruth=tf.image.decode_jpeg(groundtruth,channels=1)
-  
+
   # data argument (数据增强部分)
   if random.uniform(0,1)>=0.5:
     img=tf.image.flip_left_right(img)
@@ -410,7 +410,7 @@ def load_image_groundtruth(img_path,groundtruth_path):
 
   img=tf.image.resize(img,[patch_size,patch_size])
   groundtruth=tf.image.resize(groundtruth,[patch_size,patch_size])
-    
+
   img/=255.0
   groundtruth=(groundtruth+40)/255.0
   groundtruth=tf.cast(groundtruth,dtype=tf.uint8)
@@ -422,7 +422,7 @@ train_patch_img_path_list=sorted(glob(train_patch_dir+"*-*-img.jpg"))
 train_patch_groundtruth_path_list=sorted(glob(train_patch_dir+"*-*-groundtruth.jpg"))
 train_patch_img_path_list,train_patch_groundtruth_path_list=shuffle(train_patch_img_path_list,train_patch_groundtruth_path_list,random_state=0)
 
-# make sure that img-list and mask-list is in order 
+# make sure that img-list and mask-list is in order
 print(len(train_patch_img_path_list),len(train_patch_groundtruth_path_list))
 print(train_patch_img_path_list[:2])
 print(train_patch_groundtruth_path_list[:2])
@@ -445,14 +445,14 @@ val_dataset =val_dataset.shuffle(buffer_size=1300).prefetch(BATCH_SIZE).batch(BA
 
 model=Unet()
 
-# Learning rate and optimizer 
+# Learning rate and optimizer
 cosine_decay = tf.keras.experimental.CosineDecayRestarts(initial_learning_rate=LR, first_decay_steps=12000,t_mul=1000,m_mul=0.5,alpha=1e-5)
 optimizer=tf.keras.optimizers.Adam(learning_rate=cosine_decay)
 
-# loss function 
+# loss function
 loss=tf.keras.losses.BinaryCrossentropy(from_logits=False)
 
-# metric record 
+# metric record
 train_loss = tf.keras.metrics.Mean(name='train_loss')
 train_acc=tf.keras.metrics.Mean(name='train_acc')
 current_accuracy = tf.keras.metrics.BinaryAccuracy(name='train_accuracy')
@@ -461,7 +461,7 @@ val_loss = tf.keras.metrics.Mean(name='val_loss')
 val_acc=tf.keras.metrics.Mean(name='val_acc')
 val_accuracy = tf.keras.metrics.BinaryAccuracy(name='val_accuracy')
 
-# checkpoint 
+# checkpoint
 ckpt = tf.train.Checkpoint(model=model)
 #ckpt_manager = tf.train.CheckpointManager(ckpt, checkpoint_path, max_to_keep=3)
 #ckpt.restore(tf.train.latest_checkpoint(checkpoint_path))
@@ -472,30 +472,32 @@ log_writer = tf.summary.create_file_writer(log_dir)
 
 def train_step(step,patch,groundtruth):
   with tf.GradientTape() as tape:
-        
+
     linear,pred_seg=model(patch,training=True)
     losses = dice_loss(groundtruth, pred_seg)
-    
-  # calculate the gradient 
+
+  # calculate the gradient
   grads = tape.gradient(losses, model.trainable_variables)
-  # bp 
+  # bp
   optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
   # record the training loss and accuracy (loss)
   train_loss.update_state(losses)
   train_acc.update_state(dice(groundtruth, pred_seg))
+  f1 = f1_score(groundtruth, pred_seg)
+  f1_score_metric.update_state(f1)
 
 
 
 def val_step(step,patch,groundtruth):
- 
+
   linear,pred_seg=model(patch,training=False)
   losses = dice_loss(groundtruth, pred_seg)
-    
+
   # record the val loss and accuracy (loss)
   val_loss.update_state(losses)
   val_acc.update_state(dice(groundtruth, pred_seg))
-  
+
   tf.summary.image("image",patch,step=step)
   tf.summary.image("image transform",linear,step=step)
   tf.summary.image("groundtruth",groundtruth*255,step=step)
@@ -513,20 +515,35 @@ def dice_loss(y_true,y_pred):
   return (1-dice(y_true,y_pred))
 
 
+def f1_score(y_true, y_pred, smooth=1.):
+    y_true = tf.cast(y_true, dtype=tf.float32)
+    y_true_f = K.flatten(y_true)
+    y_pred_f = K.flatten(y_pred)
+    intersection = K.sum(y_true_f * y_pred_f)
+    precision = intersection / (K.sum(y_pred_f) + smooth)
+    recall = intersection / (K.sum(y_true_f) + smooth)
+    f1 = (2. * precision * recall) / (precision + recall + smooth)
+    return f1
+
+def dice_loss(y_true,y_pred):
+  return (1-dice(y_true,y_pred))
+
+f1_score_metric = tf.keras.metrics.Mean(name='f1_score_metric')
 lr_step=0
 last_val_loss=2e10
 with log_writer.as_default():
   for epoch in range(EPOCHS):
-    # renew the recorder 
+    # renew the recorder
     train_loss.reset_states()
     train_acc.reset_states()
     val_loss.reset_states()
     val_acc.reset_states()
-  
-    # training 
+    f1_score_metric.reset_states()
+
+    # training
     for tstep, (patch,groundtruth) in enumerate(train_dataset):
       train_step(lr_step,patch,groundtruth)
-    
+
       #tf.summary.scalar("learning_rate", optimizer._decayed_lr(tf.float32).numpy(), step=lr_step)
       tf.summary.scalar("learning_rate", optimizer.lr.numpy(), step=lr_step)
       print('\repoch {}, batch {}, loss:{:.4f}, dice:{:.4f}'.format(epoch + 1, tstep, train_loss.result(), train_acc.result()),end="")
@@ -535,13 +552,13 @@ with log_writer.as_default():
     if (epoch + 1) % VAL_TIME == 0:
       #valid (验证部分)
       for vstep, (patch,groundtruth) in enumerate(val_dataset):
-            
+
         val_step(lr_step,patch,groundtruth)
-        
-      print('\repoch {}, batch {}, train_loss:{:.4f}, train_dice:{:.4f}, val_loss:{:.4f}, val_dice:{:.4f}'.format(epoch + 1, vstep, train_loss.result(), train_acc.result(),val_loss.result(), val_acc.result()),end="")
+
+      print('\repoch {}, batch {}, loss:{:.4f}, dice:{:.4f}'.format(epoch + 1, tstep, train_loss.result(), f1_score_metric.result()),end="")
       tf.summary.scalar("val_loss", val_loss.result(), step=epoch)
       tf.summary.scalar("val_acc", val_acc.result(), step=epoch)
-    
+
       if val_loss.result()<last_val_loss:
         ckpt.save(checkpoint_path)
         last_val_loss=val_loss.result()

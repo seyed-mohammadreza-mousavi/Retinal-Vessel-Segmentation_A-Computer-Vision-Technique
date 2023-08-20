@@ -484,9 +484,14 @@ def train_step(step,patch,groundtruth):
   # record the training loss and accuracy (loss)
   train_loss.update_state(losses)
   train_acc.update_state(dice(groundtruth, pred_seg))
-  f1 = f1_score(groundtruth, pred_seg)
-  f1_score_metric.update_state(f1)
-
+  train_f1.update_state(f1_score(groundtruth, pred_seg))
+  train_sp.update_state(train_sp(groundtruth, pred_seg))
+  train_se.update_state(train_se(groundtruth, pred_seg))
+  train_precision.update_state(precision(groundtruth, pred_seg))
+  # Calculate AUROC
+  y_true = np.reshape(groundtruth, (-1))
+  y_pred = np.reshape(pred_seg, (-1))
+  train_auroc.update_state(y_true, y_pred)
 
 
 def val_step(step,patch,groundtruth):
@@ -494,9 +499,18 @@ def val_step(step,patch,groundtruth):
   linear,pred_seg=model(patch,training=False)
   losses = dice_loss(groundtruth, pred_seg)
 
-  # record the val loss and accuracy (loss)
+  # record the val loss and accuracy (loss), f1_score
   val_loss.update_state(losses)
   val_acc.update_state(dice(groundtruth, pred_seg))
+  val_f1.update_state(f1_score(groundtruth, pred_seg))
+  val_sp.update_state(val_sp(groundtruth, pred_seg))
+  val_se.update_state(val_se(groundtruth, pred_seg))
+  val_precision.update_state(precision(groundtruth, pred_seg))
+
+  # Calculate AUROC
+  y_true = np.reshape(groundtruth, (-1))
+  y_pred = np.reshape(pred_seg, (-1))
+  val_auroc.update_state(y_true, y_pred)
 
   tf.summary.image("image",patch,step=step)
   tf.summary.image("image transform",linear,step=step)
@@ -525,10 +539,37 @@ def f1_score(y_true, y_pred, smooth=1.):
     f1 = (2. * precision * recall) / (precision + recall + smooth)
     return f1
 
-def dice_loss(y_true,y_pred):
-  return (1-dice(y_true,y_pred))
+def specificity(y_true, y_pred, smooth=1.):
+    y_true = tf.cast(y_true, dtype=tf.float32)
+    y_true_f = K.flatten(y_true)
+    y_pred_f = K.flatten(y_pred)
+    true_negative = K.sum((1 - y_true_f) * (1 - y_pred_f))
+    false_positive = K.sum((1 - y_true_f) * y_pred_f)
+    spec = true_negative / (true_negative + false_positive + smooth)
+    return spec
 
-f1_score_metric = tf.keras.metrics.Mean(name='f1_score_metric')
+def sensitivity(y_true, y_pred, smooth=1.):
+    y_true = tf.cast(y_true, dtype=tf.float32)
+    y_true_f = K.flatten(y_true)
+    y_pred_f = K.flatten(y_pred)
+    true_positive = K.sum(y_true_f * y_pred_f)
+    false_negative = K.sum(y_true_f * (1 - y_pred_f))
+    se = true_positive / (true_positive + false_negative + smooth)
+    return se
+
+def precision(y_true, y_pred, smooth=1.):
+    y_true = tf.cast(y_true, dtype=tf.float32)
+    y_true_f = K.flatten(y_true)
+    y_pred_f = K.flatten(y_pred)
+    intersection = K.sum(y_true_f * y_pred_f)
+    precision = intersection / (K.sum(y_pred_f) + smooth)
+    return precision
+
+train_sp = tf.keras.metrics.Mean(name='train_sp');val_sp = tf.keras.metrics.Mean(name='val_sp')
+train_f1 = tf.keras.metrics.Mean(name='train_f1');val_f1 = tf.keras.metrics.Mean(name='val_f1')
+train_se = tf.keras.metrics.Mean(name='train_se');val_se = tf.keras.metrics.Mean(name='val_se')
+train_precision = tf.keras.metrics.Mean(name='train_precision');val_precision = tf.keras.metrics.Mean(name='val_precision')
+train_auroc = tf.keras.metrics.Mean(name='train_auroc');val_auroc = tf.keras.metrics.Mean(name='val_auroc')
 lr_step=0
 last_val_loss=2e10
 with log_writer.as_default():
@@ -538,7 +579,11 @@ with log_writer.as_default():
     train_acc.reset_states()
     val_loss.reset_states()
     val_acc.reset_states()
-    f1_score_metric.reset_states()
+    train_f1.reset_states();val_f1.reset_states()
+    train_sp.reset_states();val_sp.reset_states()
+    train_se.reset_states();val_se.reset_states()
+    train_precision.reset_states();val_precision.reset_states()
+    train_auroc.reset_states();val_auroc.reset_states()
 
     # training
     for tstep, (patch,groundtruth) in enumerate(train_dataset):
@@ -546,7 +591,7 @@ with log_writer.as_default():
 
       #tf.summary.scalar("learning_rate", optimizer._decayed_lr(tf.float32).numpy(), step=lr_step)
       tf.summary.scalar("learning_rate", optimizer.lr.numpy(), step=lr_step)
-      print('\repoch {}, batch {}, loss:{:.4f}, dice:{:.4f}'.format(epoch + 1, tstep, train_loss.result(), train_acc.result()),end="")
+      print('\repoch {}, batch {}, train_loss:{:.4f}, train_acc:{:.4f}, train_f1:{:.4f}, train_sp:{:.4f}, train_se:{:.4f}, train_precision:{:.4f}, train_auroc:{:.4f}'.format(epoch + 1, tstep, train_loss.result(), train_acc.result(), train_f1.result(), train_sp.result(), train_se.result(), train_precision.result(), train_auroc.result()),end="")
       lr_step+=1
 
     if (epoch + 1) % VAL_TIME == 0:
@@ -555,7 +600,7 @@ with log_writer.as_default():
 
         val_step(lr_step,patch,groundtruth)
 
-      print('\repoch {}, batch {}, loss:{:.4f}, dice:{:.4f}'.format(epoch + 1, tstep, train_loss.result(), f1_score_metric.result()),end="")
+      print('\repoch {}, batch {}, val_loss:{:.4f}, val_acc:{:.4f}, val_f1:{:.4f}, val_sp:{:.4f}, val_se:{:.4f}, val_precision:{:.4f}, val_auroc:{:.4f}'.format(epoch + 1, vstep, val_loss.result(), val_acc.result(), val_f1.result(), val_sp.result(), val_se.result(), val_precision.result(), val_auroc.result()),end="")
       tf.summary.scalar("val_loss", val_loss.result(), step=epoch)
       tf.summary.scalar("val_acc", val_acc.result(), step=epoch)
 

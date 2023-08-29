@@ -725,8 +725,6 @@ with log_writer.as_default():
 
 # for training from last saved checkpoint:
 '''
-#from google.colab import drive
-#drive.mount('/content/drive')
 #!cp drive/MyDrive/Colab/vision_ds/ckpt DRIVE/ -R
 ckpt.restore(tf.train.latest_checkpoint(checkpoint_path))
 start_epoch = optimizer.iterations.numpy() // (len(train_patch_img_path_list)/BATCH_SIZE) + 1

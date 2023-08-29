@@ -560,9 +560,9 @@ train_precision = tf.keras.metrics.Mean(name='train_precision');val_precision = 
 train_auroc = tf.keras.metrics.Mean(name='train_auroc');val_auroc = tf.keras.metrics.Mean(name='val_auroc')
 
 # checkpoint
-ckpt = tf.train.Checkpoint(model=model)
-#ckpt_manager = tf.train.CheckpointManager(ckpt, checkpoint_path, max_to_keep=3)
-#ckpt.restore(tf.train.latest_checkpoint(checkpoint_path))
+ckpt = tf.train.Checkpoint(optimizer=optimizer, model=model)
+ckpt_manager = tf.train.CheckpointManager(ckpt, checkpoint_path, max_to_keep=1)
+
 
 # tensorboard writer （Tensorboard）
 log_dir=log_path+ datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -676,7 +676,7 @@ def focal_loss(y_true, y_pred, alpha=alpha, gamma=gamma):
     focal_weight = alpha * tf.pow(1 - pt, gamma)
     focalloss = -tf.reduce_sum(alpha * tf.pow(1 - pt, gamma) * tf.math.log(pt))
     return focalloss
-
+print(f"#################################################################################################")
 print(f"Training starts from here:")
 print(f"#################################################################################################")
 
@@ -701,7 +701,7 @@ with log_writer.as_default():
 
       #tf.summary.scalar("learning_rate", optimizer._decayed_lr(tf.float32).numpy(), step=lr_step)
       tf.summary.scalar("learning_rate", optimizer.lr.numpy(), step=lr_step)
-      print('\repoch {}/{:.4f}, batch {}/{:.4f} ==> train_loss:{:.4f}, train_acc:{:.4f}, train_f1:{:.4f}, train_sp:{:.4f}, train_se:{:.4f}, train_precision:{:.4f}, train_auroc:{:.4f}'.format(epoch + 1, EPOCHS, tstep, np.ceil(len(train_patch_img_path_list)/BATCH_SIZE), train_loss.result(), train_acc.result(), train_f1.result(), train_sp.result(), train_se.result(), train_precision.result(), train_auroc.result()),end="")
+      print('\repoch {}/{:.4f}, batch {}/{:.4f} ==> train_loss:{:.4f}, train_acc:{:.4f}, train_f1:{:.4f}, train_sp:{:.4f}, train_se:{:.4f}, train_precision:{:.4f}, train_auroc:{:.4f}'.format(epoch + 1, EPOCHS, tstep, np.ceil(len(train_patch_img_path_list)/BATCH_SIZE)-1, train_loss.result(), train_acc.result(), train_f1.result(), train_sp.result(), train_se.result(), train_precision.result(), train_auroc.result()),end="")
       lr_step+=1
 
     if (epoch + 1) % VAL_TIME == 0:
@@ -710,7 +710,7 @@ with log_writer.as_default():
 
         val_step(lr_step,patch,groundtruth)
 
-      print('\repoch {}/{:.4f}, batch {}/{:.4f} ==> val_loss:{:.4f}, val_acc:{:.4f}, val_f1:{:.4f}, val_sp:{:.4f}, val_se:{:.4f}, val_precision:{:.4f}, val_auroc:{:.4f}'.format(epoch + 1, EPOCHS, vstep, np.ceil(len(train_patch_img_path_list)/BATCH_SIZE), val_loss.result(), val_acc.result(), val_f1.result(), val_sp.result(), val_se.result(), val_precision.result(), val_auroc.result()),end="")
+      print('\repoch {}/{:.4f}, batch {}/{:.4f} ==> val_loss:{:.4f}, val_acc:{:.4f}, val_f1:{:.4f}, val_sp:{:.4f}, val_se:{:.4f}, val_precision:{:.4f}, val_auroc:{:.4f}'.format(epoch + 1, EPOCHS, vstep, np.ceil(len(train_patch_img_path_list)/BATCH_SIZE)-1, val_loss.result(), val_acc.result(), val_f1.result(), val_sp.result(), val_se.result(), val_precision.result(), val_auroc.result()),end="")
       tf.summary.scalar("val_loss", val_loss.result(), step=epoch)
       tf.summary.scalar("val_acc", val_acc.result(), step=epoch)
 
@@ -721,3 +721,41 @@ with log_writer.as_default():
     tf.summary.scalar("train_loss", train_loss.result(), step=epoch)
     tf.summary.scalar("train_acc", train_acc.result(), step=epoch)
     log_writer.flush()
+
+# for training from last saved checkpoint:
+'''
+ckpt.restore(tf.train.latest_checkpoint(checkpoint_path))
+start_epoch = optimizer.iterations.numpy() // (len(train_patch_img_path_list)/BATCH_SIZE) + 1
+from tensorflow.python.ops.batch_ops import batch
+lr_step=0
+last_val_loss=2e10
+with log_writer.as_default():
+  for epoch in range(int(start_epoch), EPOCHS):
+    # renew the recorder
+    train_loss.reset_states();train_acc.reset_states();val_loss.reset_states()
+    val_acc.reset_states();train_f1.reset_states();val_f1.reset_states()
+    train_sp.reset_states();val_sp.reset_states();train_se.reset_states()
+    val_se.reset_states();train_precision.reset_states();val_precision.reset_states()
+    train_auroc.reset_states();val_auroc.reset_states()
+    # training
+    for tstep, (patch,groundtruth) in enumerate(train_dataset):
+      train_step(lr_step,patch,groundtruth)
+      #tf.summary.scalar("learning_rate", optimizer._decayed_lr(tf.float32).numpy(), step=lr_step)
+      tf.summary.scalar("learning_rate", optimizer.lr.numpy(), step=lr_step)
+      print('\repoch {}/{:.4f}, batch {}/{:.4f} ==> train_loss:{:.4f}, train_acc:{:.4f}, train_f1:{:.4f}, train_sp:{:.4f}, train_se:{:.4f}, train_precision:{:.4f}, train_auroc:{:.4f}'.format(epoch + 1, EPOCHS, tstep, np.ceil(len(train_patch_img_path_list)/BATCH_SIZE)-1, train_loss.result(), train_acc.result(), train_f1.result(), train_sp.result(), train_se.result(), train_precision.result(), train_auroc.result()),end="")
+      lr_step+=1
+    if (epoch + 1) % 2 == 0:
+      #valid
+      for vstep, (patch,groundtruth) in enumerate(val_dataset):
+        val_step(lr_step,patch,groundtruth)
+      print('\repoch {}/{:.4f}, batch {}/{:.4f} ==> val_loss:{:.4f}, val_acc:{:.4f}, val_f1:{:.4f}, val_sp:{:.4f}, val_se:{:.4f}, val_precision:{:.4f}, val_auroc:{:.4f}'.format(epoch + 1, EPOCHS, vstep, np.ceil(len(train_patch_img_path_list)/BATCH_SIZE)-1, val_loss.result(), val_acc.result(), val_f1.result(), val_sp.result(), val_se.result(), val_precision.result(), val_auroc.result()),end="")
+      tf.summary.scalar("val_loss", val_loss.result(), step=epoch)
+      tf.summary.scalar("val_acc", val_acc.result(), step=epoch)
+      if val_loss.result()<last_val_loss:
+        ckpt.save(checkpoint_path)
+        last_val_loss=val_loss.result()
+    print("")
+    tf.summary.scalar("train_loss", train_loss.result(), step=epoch)
+    tf.summary.scalar("train_acc", train_acc.result(), step=epoch)
+    log_writer.flush()
+'''

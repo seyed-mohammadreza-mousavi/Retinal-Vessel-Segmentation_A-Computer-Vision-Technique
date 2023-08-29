@@ -46,7 +46,8 @@ from tensorflow.keras.layers import AveragePooling2D,Conv2DTranspose,Input,Add,C
 %matplotlib inline
 
 patch_size=48        # patch image size
-patch_num=15        # sample number of one training image
+patch_num=1500        # sample number of one training image
+#patch_num=15        # sample number of one training image
 patch_threshold=25   # threshold for the patch, the smaller threshoold, the less vessel in the patch
 TRAIN_OR_VAL=0.7
 dataset_path='DRIVE/'   # modify the dataset_path to your own dir
@@ -676,6 +677,9 @@ def focal_loss(y_true, y_pred, alpha=alpha, gamma=gamma):
     focalloss = -tf.reduce_sum(alpha * tf.pow(1 - pt, gamma) * tf.math.log(pt))
     return focalloss
 
+print(f"Training starts from here:")
+print(f"#################################################################################################")
+
 lr_step=0
 last_val_loss=2e10
 with log_writer.as_default():
@@ -697,7 +701,7 @@ with log_writer.as_default():
 
       #tf.summary.scalar("learning_rate", optimizer._decayed_lr(tf.float32).numpy(), step=lr_step)
       tf.summary.scalar("learning_rate", optimizer.lr.numpy(), step=lr_step)
-      print('\repoch {}, batch {}, train_loss:{:.4f}, train_acc:{:.4f}, train_f1:{:.4f}, train_sp:{:.4f}, train_se:{:.4f}, train_precision:{:.4f}, train_auroc:{:.4f}'.format(epoch + 1, tstep, train_loss.result(), train_acc.result(), train_f1.result(), train_sp.result(), train_se.result(), train_precision.result(), train_auroc.result()),end="")
+      print('\repoch {}/{:.4f}, batch {}/{:.4f} ==> train_loss:{:.4f}, train_acc:{:.4f}, train_f1:{:.4f}, train_sp:{:.4f}, train_se:{:.4f}, train_precision:{:.4f}, train_auroc:{:.4f}'.format(epoch + 1, EPOCHS, tstep, np.ceil(len(train_patch_img_path_list)/BATCH_SIZE), train_loss.result(), train_acc.result(), train_f1.result(), train_sp.result(), train_se.result(), train_precision.result(), train_auroc.result()),end="")
       lr_step+=1
 
     if (epoch + 1) % VAL_TIME == 0:
@@ -706,7 +710,7 @@ with log_writer.as_default():
 
         val_step(lr_step,patch,groundtruth)
 
-      print('\repoch {}, batch {}, val_loss:{:.4f}, val_acc:{:.4f}, val_f1:{:.4f}, val_sp:{:.4f}, val_se:{:.4f}, val_precision:{:.4f}, val_auroc:{:.4f}'.format(epoch + 1, vstep, val_loss.result(), val_acc.result(), val_f1.result(), val_sp.result(), val_se.result(), val_precision.result(), val_auroc.result()),end="")
+      print('\repoch {}/{:.4f}, batch {}/{:.4f} ==> val_loss:{:.4f}, val_acc:{:.4f}, val_f1:{:.4f}, val_sp:{:.4f}, val_se:{:.4f}, val_precision:{:.4f}, val_auroc:{:.4f}'.format(epoch + 1, EPOCHS, vstep, np.ceil(len(train_patch_img_path_list)/BATCH_SIZE), val_loss.result(), val_acc.result(), val_f1.result(), val_sp.result(), val_se.result(), val_precision.result(), val_auroc.result()),end="")
       tf.summary.scalar("val_loss", val_loss.result(), step=epoch)
       tf.summary.scalar("val_acc", val_acc.result(), step=epoch)
 

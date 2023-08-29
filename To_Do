@@ -1,0 +1,4 @@
+1- Consider 1500 patches per each image (DRIVE dataset 20 * 1500).
+2- Consider Test data as validation data in order to obtain best results based on test data.
+3- Set epoch=200 and Train Network and report metrics.
+4- Change loss to focal loss and train model again and report metrics. 

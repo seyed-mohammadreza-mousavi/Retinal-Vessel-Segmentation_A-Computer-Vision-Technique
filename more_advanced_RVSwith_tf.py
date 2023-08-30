@@ -1,5 +1,5 @@
-#from google.colab import drive
-#drive.mount('/content/drive')
+from google.colab import drive
+drive.mount('/content/drive')
 
 #!cp drive/MyDrive/Colab/vision_ds/DRIVE ./ -R
 !git clone https://github.com/aAmohammadrezaaA/Retinal-Vessel-Segmentation_A-Computer-Vision-Technique.git
@@ -717,7 +717,7 @@ with log_writer.as_default():
       if val_loss.result()<last_val_loss:
         ckpt.save(checkpoint_path)
         last_val_loss=val_loss.result()
-        #!cp DRIVE/ckpt drive/MyDrive/Colab/vision_ds/ -Rf
+        !cp DRIVE/ckpt drive/MyDrive/Colab/vision_ds/ -Rf
     print("")
     tf.summary.scalar("train_loss", train_loss.result(), step=epoch)
     tf.summary.scalar("train_acc", train_acc.result(), step=epoch)
@@ -757,7 +757,7 @@ with log_writer.as_default():
         ckpt.save(checkpoint_path)
         last_val_loss=val_loss.result()
         !cp DRIVE/ckpt drive/MyDrive/Colab/vision_ds/ -Rf
-        print(f"new checkpoint saved")
+        print(f"\nnew checkpoint saved")
     print("")
     tf.summary.scalar("train_loss", train_loss.result(), step=epoch)
     tf.summary.scalar("train_acc", train_acc.result(), step=epoch)

@@ -1,13 +1,14 @@
 Results with crossentropy:
-epoch 36, batch 468, val_loss:0.2232, val_acc:0.7902, val_f1:0.4842, val_sp:0.7836, val_se:0.7836, val_precision:0.7829, val_auroc:0.7836
-epoch 37, batch 468, train_loss:0.0408, train_acc:0.9206, train_f1:0.5969, train_sp:0.8855, train_se:0.8855, train_precision:0.8847, train_auroc:0.8855
-epoch 38, batch 223, train_loss:0.0395, train_acc:0.9236, train_f1:0.5995, train_sp:0.8907, train_se:0.8907, train_precision:0.8900, train_auroc:0.8907
+epoch 36/200, batch 468/468 ==> val_loss:0.2245, val_acc:0.7899, val_f1:0.4840, val_sp:0.7748, val_se:0.7748, val_precision:0.7740, val_auroc:0.7748
+epoch 37/200, batch 468/468 ==> train_loss:0.0431, train_acc:0.9160, train_f1:0.5930, train_sp:0.8784, train_se:0.8784, train_precision:0.8776, train_auroc:0.8784
+epoch 38/200, batch 468/468 ==> train_loss:0.0407, train_acc:0.9209, train_f1:0.5972, train_sp:0.8859, train_se:0.8859, train_precision:0.8852, train_auroc:0.8859
 ===========================================================================
 Results with dice_loss:
-epoch 32, batch 468, val_loss:0.2087, val_acc:0.7913, val_f1:0.4852, val_sp:0.7908, val_se:0.7908, val_precision:0.7901, val_auroc:0.7908
-epoch 33, batch 310, train_loss:0.0879, train_acc:0.9121, train_f1:0.5895, train_sp:0.8770, train_se:0.8770, train_precision:0.8763, train_auroc:0.8770
+epoch 34/200, batch 468/468 ==> val_loss:0.1992, val_acc:0.8008, val_f1:0.4933, val_sp:0.8016, val_se:0.8016, val_precision:0.8011, val_auroc:0.8016
+epoch 35/200, batch 468/468 ==> train_loss:0.0782, train_acc:0.9218, train_f1:0.5979, train_sp:0.8926, train_se:0.8926, train_precision:0.8920, train_auroc:0.8926
+epoch 36/200, batch 468/468 ==> train_loss:0.0746, train_acc:0.9254, train_f1:0.6010, train_sp:0.8985, train_se:0.8985, train_precision:0.8978, train_auroc:0.8985
 ===========================================================================
 Results with focal_loss:
-epoch 34, batch 468, val_loss:3436.0117, val_acc:0.7109, val_f1:0.4188, val_sp:0.6583, val_se:0.6583, val_precision:0.6571, val_auroc:0.6583
-epoch 35, batch 119, train_loss:231.4780, train_acc:0.8138, train_f1:0.5067, train_sp:0.7311, train_se:0.7311, train_precision:0.7304, train_auroc:0.7311
+epoch 36/200, batch 468/468 ==> val_loss:3691.6108, val_acc:0.7170, val_f1:0.4237, val_sp:0.6686, val_se:0.6686, val_precision:0.6673, val_auroc:0.6686
+epoch 37/200, batch 243/468 ==> train_loss:214.0324, train_acc:0.8256, train_f1:0.5163, train_sp:0.7483, train_se:0.7483, train_precision:0.7476, train_auroc:0.7483
 ===========================================================================

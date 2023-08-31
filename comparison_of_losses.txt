@@ -9,6 +9,7 @@ epoch 35/200, batch 468/468 ==> train_loss:0.0782, train_acc:0.9218, train_f1:0.
 epoch 36/200, batch 468/468 ==> train_loss:0.0746, train_acc:0.9254, train_f1:0.6010, train_sp:0.8985, train_se:0.8985, train_precision:0.8978, train_auroc:0.8985
 ===========================================================================
 Results with focal_loss:
-epoch 36/200, batch 468/468 ==> val_loss:3691.6108, val_acc:0.7170, val_f1:0.4237, val_sp:0.6686, val_se:0.6686, val_precision:0.6673, val_auroc:0.6686
-epoch 37/200, batch 243/468 ==> train_loss:214.0324, train_acc:0.8256, train_f1:0.5163, train_sp:0.7483, train_se:0.7483, train_precision:0.7476, train_auroc:0.7483
+epoch 44/200.0000, batch 468/468.0000 ==> val_loss:4232.2256, val_acc:0.7367, val_f1:0.4396, val_sp:0.7040, val_se:0.7040, val_precision:0.7028, val_auroc:0.7040
+epoch 45/200.0000, batch 468/468.0000 ==> train_loss:170.6789, train_acc:0.8527, train_f1:0.5390, train_sp:0.7866, train_se:0.7866, train_precision:0.7859, train_auroc:0.7866
+epoch 46/200.0000, batch 154/468.0000 ==> train_loss:172.1089, train_acc:0.8546, train_f1:0.5406, train_sp:0.7897, train_se:0.7897, train_precision:0.7890, train_auroc:0.7897
 ===========================================================================

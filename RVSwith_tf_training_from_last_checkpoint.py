@@ -578,8 +578,8 @@ def train_step(step,patch,groundtruth):
 
     linear,pred_seg=model(patch,training=True)
     #losses = loss(groundtruth, pred_seg) # crossentropy
-    losses = dice_loss(groundtruth, pred_seg)
-    #losses = focal_loss(groundtruth, pred_seg)
+    #losses = dice_loss(groundtruth, pred_seg)
+    losses = focal_loss(groundtruth, pred_seg)
 
   # calculate the gradient
   grads = tape.gradient(losses, model.trainable_variables)
@@ -603,8 +603,8 @@ def val_step(step,patch,groundtruth):
 
   linear,pred_seg=model(patch,training=False)
   #losses = loss(groundtruth, pred_seg) # crossentropy
-  losses = dice_loss(groundtruth, pred_seg)
-  #losses = focal_loss(groundtruth, pred_seg)
+  #losses = dice_loss(groundtruth, pred_seg)
+  losses = focal_loss(groundtruth, pred_seg)
 
   # record the val loss and accuracy, f1_score
   val_loss.update_state(losses)

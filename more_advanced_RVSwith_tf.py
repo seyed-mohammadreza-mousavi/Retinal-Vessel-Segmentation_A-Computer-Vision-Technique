@@ -620,8 +620,8 @@ ckpt_manager = tf.train.CheckpointManager(ckpt, checkpoint_path, max_to_keep=1)
 
 
 # tensorboard writer （Tensorboard）
-log_dir=log_path+ datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-log_writer = tf.summary.create_file_writer(log_dir)
+#log_dir=log_path+ datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+#log_writer = tf.summary.create_file_writer(log_dir)
 
 
 
@@ -665,24 +665,22 @@ def val_step(step,patch,groundtruth):
   y_pred = np.reshape(pred_seg, (-1))
   val_auroc.update_state(y_true, y_pred)
 
-  tf.summary.image("image",patch,step=step)
-  tf.summary.image("image transform",linear,step=step)
-  tf.summary.image("groundtruth",groundtruth*255,step=step)
-  tf.summary.image("pred",pred_seg,step=step)
+  #tf.summary.image("image",patch,step=step)
+  #tf.summary.image("image transform",linear,step=step)
+  #tf.summary.image("groundtruth",groundtruth*255,step=step)
+  #tf.summary.image("pred",pred_seg,step=step)
   #log_writer.flush()
 
 
-print(f"#################################################################################################")
 print(f"Training starts from here:")
-print(f"#################################################################################################")
-
-
-# no tensorboard
-
+print(f"***")
 lr_step=0
 last_val_loss=2e10
-#with log_writer.as_default():
 for epoch in range(EPOCHS):
+  start_time_epoch = time.time()
+  print(f"#####################################################################################################################################")
+  print(f"start of epoch: {epoch+1}/{EPOCHS}, batch size: {BATCH_SIZE}, total batches per epoch: {(patch_num*20)//BATCH_SIZE}")
+  print(f"best validation loss: {last_val_loss}, total samples to see till the end of the epoch: {((patch_num*20)//BATCH_SIZE)*BATCH_SIZE}\n")
   # renew train recorder
   train_loss.reset_states();train_acc.reset_states();train_f1.reset_states()
   train_sp.reset_states();train_se.reset_states();train_precision.reset_states();train_auroc.reset_states()
@@ -692,16 +690,21 @@ for epoch in range(EPOCHS):
   # training
   for tstep, (patch,groundtruth) in enumerate(train_dataset):
     train_step(lr_step,patch,groundtruth)
-    #lr_step+=1
+    print('\rtraining results: batch {}, samples seen so far: {}:  ==> train_loss:{:.4f}, train_acc:{:.4f}, train_f1:{:.4f}, train_sp:{:.4f}, train_se:{:.4f}, train_precision:{:.4f}, train_auroc:{:.4f}'.format(tstep, tstep*BATCH_SIZE, train_loss.result(), train_acc.result(), train_f1.result(), train_sp.result(), train_se.result(), train_precision.result(), train_auroc.result()),end="")
+  print(f"#")
   for vstep, (patch,groundtruth) in enumerate(val_dataset):
     val_step(lr_step,patch,groundtruth)
-    #print('\repoch {}/{:.4f}, batch {}/{:.4f} ==> train_loss:{:.4f}, train_acc:{:.4f}, train_f1:{:.4f}, train_sp:{:.4f}, train_se:{:.4f}, train_precision:{:.4f}, train_auroc:{:.4f}'.format(epoch + 1, EPOCHS, tstep, np.ceil(len(train_patch_img_path_list)/BATCH_SIZE)-1, train_loss.result(), train_acc.result(), train_f1.result(), train_sp.result(), train_se.result(), train_precision.result(), train_auroc.result()),end="")
-    #print('\repoch {}/{:.4f}, batch {}/{:.4f} ==> val_loss:{:.4f}, val_acc:{:.4f}, val_f1:{:.4f}, val_sp:{:.4f}, val_se:{:.4f}, val_precision:{:.4f}, val_auroc:{:.4f}'.format(epoch + 1, EPOCHS, vstep, np.ceil(len(train_patch_img_path_list)/BATCH_SIZE)-1, val_loss.result(), val_acc.result(), val_f1.result(), val_sp.result(), val_se.result(), val_precision.result(), val_auroc.result()),end="")
-    print(f"epoch: {epoch + 1}/{EPOCHS}, batch: {tstep}/{np.ceil(len(train_patch_img_path_list)/BATCH_SIZE)-1} ==> train_loss: {train_loss.result()}, train_acc: {train_acc.result()}, train_f1: {train_f1.result()}, train_sp: {train_sp.result()}, train_se: {train_se.result()}, train_precision: {train_precision.result()}, train_auroc: {train_auroc.result()}\nvalid_loss: {val_loss.result()}, valid_acc: {val_acc.result()}, valid_f1: {val_f1.result()}, valid_sp: {val_sp.result()}, valid_se: {val_se.result()}, val_precision: {val_precision.result()}, valid_auroc: {val_auroc.result()}\n##################")
+    print('\rvalidation results: batch {}, samples seen so far: {} ==> val_loss:{:.4f}, val_acc:{:.4f}, val_f1:{:.4f}, val_sp:{:.4f}, val_se:{:.4f}, val_precision:{:.4f}, val_auroc:{:.4f}'.format(vstep, tstep*BATCH_SIZE, val_loss.result(), val_acc.result(), val_f1.result(), val_sp.result(), val_se.result(), val_precision.result(), val_auroc.result()),end="")
     if val_loss.result()<last_val_loss:
+      #!rm -rfv DRIVE/ckpt
       ckpt.save(checkpoint_path)
       last_val_loss=val_loss.result()
+      #!rm -rfv drive/MyDrive/Colab/vision_ds/
       #!cp DRIVE/ckpt drive/MyDrive/Colab/vision_ds/ -Rf
+  end_time_epoch = time.time()
+  times = end_time_epoch-start_time_epoch;m, s = divmod(times, 60);h, m = divmod(m, 60)
+  print(f"\n\nThis epoch took ({h}:{m}:{np.round(s)}).")
+  
 '''
 lr_step=0
 last_val_loss=2e10

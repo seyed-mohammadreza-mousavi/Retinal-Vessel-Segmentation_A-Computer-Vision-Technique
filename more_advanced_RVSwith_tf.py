@@ -45,6 +45,11 @@ from tensorflow.keras.layers import AveragePooling2D,Conv2DTranspose,Input,Add,C
 
 %matplotlib inline
 
+EPOCHS=200
+VAL_TIME=2
+LR=0.0003
+BATCH_SIZE=64
+
 patch_size=48        # patch image size
 patch_num=1500        # sample number of one training image
 #patch_num=15        # sample number of one training image
@@ -466,11 +471,6 @@ class Unet(tf.keras.Model):
     seg_result=self.act(self.bn_final(self.conv_final(x),training=training))
 
     return x_linear,seg_result
-
-EPOCHS=200
-VAL_TIME=2
-LR=0.0003
-BATCH_SIZE=64
 
 checkpoint_path=dataset_path+"ckpt/"
 log_path=dataset_path+"logs/"

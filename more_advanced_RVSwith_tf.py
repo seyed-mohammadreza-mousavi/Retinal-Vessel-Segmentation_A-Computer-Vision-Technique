@@ -676,11 +676,12 @@ print(f"Training starts from here:")
 print(f"***")
 lr_step=0
 last_val_loss=2e10
+best_epoch=-1
 for epoch in range(EPOCHS):
   start_time_epoch = time.time()
   print(f"#####################################################################################################################################")
   print(f"start of epoch: {epoch+1}/{EPOCHS}, batch size: {BATCH_SIZE}, total batches per epoch: {(patch_num*20)//BATCH_SIZE}")
-  print(f"best validation loss: {last_val_loss}, total samples to see till the end of the epoch: {((patch_num*20)//BATCH_SIZE)*BATCH_SIZE}\n")
+  print(f"lowest validation loss: {last_val_loss} which was at epoch {best_epoch}, total samples to see till the end of the epoch: {((patch_num*20)//BATCH_SIZE)*BATCH_SIZE}\n")
   # renew train recorder
   train_loss.reset_states();train_acc.reset_states();train_f1.reset_states()
   train_sp.reset_states();train_se.reset_states();train_precision.reset_states();train_auroc.reset_states()
@@ -696,14 +697,18 @@ for epoch in range(EPOCHS):
     val_step(lr_step,patch,groundtruth)
     print('\rvalidation results: batch {}, samples seen so far: {} ==> val_loss:{:.4f}, val_acc:{:.4f}, val_f1:{:.4f}, val_sp:{:.4f}, val_se:{:.4f}, val_precision:{:.4f}, val_auroc:{:.4f}'.format(vstep, tstep*BATCH_SIZE, val_loss.result(), val_acc.result(), val_f1.result(), val_sp.result(), val_se.result(), val_precision.result(), val_auroc.result()),end="")
     if val_loss.result()<last_val_loss:
-      #!rm -rfv DRIVE/ckpt
+      last_val_loss=val_loss.result()
+      best_epoch=epoch+1
+    if val_loss.result()<last_val_loss:
+      !rm -rfv DRIVE/ckpt/*
       ckpt.save(checkpoint_path)
       last_val_loss=val_loss.result()
-      #!rm -rfv drive/MyDrive/Colab/vision_ds/
-      #!cp DRIVE/ckpt drive/MyDrive/Colab/vision_ds/ -Rf
+      !rm -rfv drive/MyDrive/Colab/vision_ds/
+      !cp DRIVE/ckpt drive/MyDrive/Colab/vision_ds/ -Rf
   end_time_epoch = time.time()
   times = end_time_epoch-start_time_epoch;m, s = divmod(times, 60);h, m = divmod(m, 60)
   print(f"\n\nThis epoch took ({h}:{m}:{np.round(s)}).")
+print(f"\nend of training\n")
   
 '''
 lr_step=0

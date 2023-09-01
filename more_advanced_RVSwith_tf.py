@@ -508,6 +508,61 @@ def load_image_groundtruth(img_path,groundtruth_path):
 
   return img,groundtruth
 
+def dice(y_true,y_pred,smooth=1.):
+  y_true=tf.cast(y_true,dtype=tf.float32)
+  y_true_f = K.flatten(y_true)
+  y_pred_f = K.flatten(y_pred)
+  intersection = K.sum(y_true_f * y_pred_f)
+  return (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
+
+def dice_loss(y_true,y_pred):
+  return (1-dice(y_true,y_pred))
+
+
+def f1_score(y_true, y_pred, smooth=1.):
+    y_true = tf.cast(y_true, dtype=tf.float32)
+    y_true_f = K.flatten(y_true)
+    y_pred_f = K.flatten(y_pred)
+    intersection = K.sum(y_true_f * y_pred_f)
+    precision = intersection / (K.sum(y_pred_f) + smooth)
+    recall = intersection / (K.sum(y_true_f) + smooth)
+    f1 = (2. * precision * recall) / (precision + recall + smooth)
+    return f1
+
+def specificity(y_true, y_pred, smooth=1.):
+    y_true = tf.cast(y_true, dtype=tf.float32)
+    y_true_f = K.flatten(y_true)
+    y_pred_f = K.flatten(y_pred)
+    true_negative = K.sum((1 - y_true_f) * (1 - y_pred_f))
+    false_positive = K.sum((1 - y_true_f) * y_pred_f)
+    spec = true_negative / (true_negative + false_positive + smooth)
+    return spec
+
+def sensitivity(y_true, y_pred, smooth=1.):
+    y_true = tf.cast(y_true, dtype=tf.float32)
+    y_true_f = K.flatten(y_true)
+    y_pred_f = K.flatten(y_pred)
+    true_positive = K.sum(y_true_f * y_pred_f)
+    false_negative = K.sum(y_true_f * (1 - y_pred_f))
+    se = true_positive / (true_positive + false_negative + smooth)
+    return se
+
+def precision(y_true, y_pred, smooth=1.):
+    y_true = tf.cast(y_true, dtype=tf.float32)
+    y_true_f = K.flatten(y_true)
+    y_pred_f = K.flatten(y_pred)
+    intersection = K.sum(y_true_f * y_pred_f)
+    precision = intersection / (K.sum(y_pred_f) + smooth)
+    return precision
+
+alpha = 0.25;gamma = 2.0
+
+def focal_loss(y_true, y_pred, alpha=alpha, gamma=gamma):
+    y_pred = tf.clip_by_value(y_pred, 1e-7, 1.0 - 1e-7)
+    pt = tf.where(tf.equal(y_true, 1), y_pred, 1 - y_pred)
+    focal_weight = alpha * tf.pow(1 - pt, gamma)
+    focalloss = -tf.reduce_sum(alpha * tf.pow(1 - pt, gamma) * tf.math.log(pt))
+    return focalloss
 
 train_patch_img_path_list=sorted(glob(train_patch_dir+"*-*-img.jpg"))
 train_patch_groundtruth_path_list=sorted(glob(train_patch_dir+"*-*-groundtruth.jpg"))
@@ -568,8 +623,7 @@ ckpt_manager = tf.train.CheckpointManager(ckpt, checkpoint_path, max_to_keep=1)
 log_dir=log_path+ datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 log_writer = tf.summary.create_file_writer(log_dir)
 
-alpha = 0.25
-gamma = 2.0
+
 
 def train_step(step,patch,groundtruth):
   with tf.GradientTape() as tape:
@@ -585,12 +639,9 @@ def train_step(step,patch,groundtruth):
   optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
   # record the training loss and accuracy
-  train_loss.update_state(losses)
-  train_acc.update_state(dice(groundtruth, pred_seg))
-  train_f1.update_state(f1_score(groundtruth, pred_seg))
-  train_sp.update_state(train_sp(groundtruth, pred_seg))
-  train_se.update_state(train_se(groundtruth, pred_seg))
-  train_precision.update_state(precision(groundtruth, pred_seg))
+  train_loss.update_state(losses);train_acc.update_state(dice(groundtruth, pred_seg))
+  train_f1.update_state(f1_score(groundtruth, pred_seg));train_sp.update_state(train_sp(groundtruth, pred_seg))
+  train_se.update_state(train_se(groundtruth, pred_seg));train_precision.update_state(precision(groundtruth, pred_seg))
   # Calculate AUROC for training
   y_true = np.reshape(groundtruth, (-1))
   y_pred = np.reshape(pred_seg, (-1))
@@ -605,12 +656,9 @@ def val_step(step,patch,groundtruth):
   #losses = focal_loss(groundtruth, pred_seg)
 
   # record the val loss and accuracy, f1_score
-  val_loss.update_state(losses)
-  val_acc.update_state(dice(groundtruth, pred_seg))
-  val_f1.update_state(f1_score(groundtruth, pred_seg))
-  val_sp.update_state(val_sp(groundtruth, pred_seg))
-  val_se.update_state(val_se(groundtruth, pred_seg))
-  val_precision.update_state(precision(groundtruth, pred_seg))
+  val_loss.update_state(losses);val_acc.update_state(dice(groundtruth, pred_seg))
+  val_f1.update_state(f1_score(groundtruth, pred_seg));val_sp.update_state(val_sp(groundtruth, pred_seg))
+  val_se.update_state(val_se(groundtruth, pred_seg));val_precision.update_state(precision(groundtruth, pred_seg))
 
   # Calculate AUROC for validation
   y_true = np.reshape(groundtruth, (-1))
@@ -621,65 +669,40 @@ def val_step(step,patch,groundtruth):
   tf.summary.image("image transform",linear,step=step)
   tf.summary.image("groundtruth",groundtruth*255,step=step)
   tf.summary.image("pred",pred_seg,step=step)
-  log_writer.flush()
-
-def dice(y_true,y_pred,smooth=1.):
-  y_true=tf.cast(y_true,dtype=tf.float32)
-  y_true_f = K.flatten(y_true)
-  y_pred_f = K.flatten(y_pred)
-  intersection = K.sum(y_true_f * y_pred_f)
-  return (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
-
-def dice_loss(y_true,y_pred):
-  return (1-dice(y_true,y_pred))
+  #log_writer.flush()
 
 
-def f1_score(y_true, y_pred, smooth=1.):
-    y_true = tf.cast(y_true, dtype=tf.float32)
-    y_true_f = K.flatten(y_true)
-    y_pred_f = K.flatten(y_pred)
-    intersection = K.sum(y_true_f * y_pred_f)
-    precision = intersection / (K.sum(y_pred_f) + smooth)
-    recall = intersection / (K.sum(y_true_f) + smooth)
-    f1 = (2. * precision * recall) / (precision + recall + smooth)
-    return f1
-
-def specificity(y_true, y_pred, smooth=1.):
-    y_true = tf.cast(y_true, dtype=tf.float32)
-    y_true_f = K.flatten(y_true)
-    y_pred_f = K.flatten(y_pred)
-    true_negative = K.sum((1 - y_true_f) * (1 - y_pred_f))
-    false_positive = K.sum((1 - y_true_f) * y_pred_f)
-    spec = true_negative / (true_negative + false_positive + smooth)
-    return spec
-
-def sensitivity(y_true, y_pred, smooth=1.):
-    y_true = tf.cast(y_true, dtype=tf.float32)
-    y_true_f = K.flatten(y_true)
-    y_pred_f = K.flatten(y_pred)
-    true_positive = K.sum(y_true_f * y_pred_f)
-    false_negative = K.sum(y_true_f * (1 - y_pred_f))
-    se = true_positive / (true_positive + false_negative + smooth)
-    return se
-
-def precision(y_true, y_pred, smooth=1.):
-    y_true = tf.cast(y_true, dtype=tf.float32)
-    y_true_f = K.flatten(y_true)
-    y_pred_f = K.flatten(y_pred)
-    intersection = K.sum(y_true_f * y_pred_f)
-    precision = intersection / (K.sum(y_pred_f) + smooth)
-    return precision
-
-def focal_loss(y_true, y_pred, alpha=alpha, gamma=gamma):
-    y_pred = tf.clip_by_value(y_pred, 1e-7, 1.0 - 1e-7)
-    pt = tf.where(tf.equal(y_true, 1), y_pred, 1 - y_pred)
-    focal_weight = alpha * tf.pow(1 - pt, gamma)
-    focalloss = -tf.reduce_sum(alpha * tf.pow(1 - pt, gamma) * tf.math.log(pt))
-    return focalloss
 print(f"#################################################################################################")
 print(f"Training starts from here:")
 print(f"#################################################################################################")
 
+
+# no tensorboard
+
+lr_step=0
+last_val_loss=2e10
+#with log_writer.as_default():
+for epoch in range(EPOCHS):
+  # renew train recorder
+  train_loss.reset_states();train_acc.reset_states();train_f1.reset_states()
+  train_sp.reset_states();train_se.reset_states();train_precision.reset_states();train_auroc.reset_states()
+  # renew validation recorders
+  val_sp.reset_states();val_acc.reset_states();val_f1.reset_states();val_se.reset_states()
+  val_precision.reset_states();val_auroc.reset_states();val_loss.reset_states()
+  # training
+  for tstep, (patch,groundtruth) in enumerate(train_dataset):
+    train_step(lr_step,patch,groundtruth)
+    #lr_step+=1
+  for vstep, (patch,groundtruth) in enumerate(val_dataset):
+    val_step(lr_step,patch,groundtruth)
+    #print('\repoch {}/{:.4f}, batch {}/{:.4f} ==> train_loss:{:.4f}, train_acc:{:.4f}, train_f1:{:.4f}, train_sp:{:.4f}, train_se:{:.4f}, train_precision:{:.4f}, train_auroc:{:.4f}'.format(epoch + 1, EPOCHS, tstep, np.ceil(len(train_patch_img_path_list)/BATCH_SIZE)-1, train_loss.result(), train_acc.result(), train_f1.result(), train_sp.result(), train_se.result(), train_precision.result(), train_auroc.result()),end="")
+    #print('\repoch {}/{:.4f}, batch {}/{:.4f} ==> val_loss:{:.4f}, val_acc:{:.4f}, val_f1:{:.4f}, val_sp:{:.4f}, val_se:{:.4f}, val_precision:{:.4f}, val_auroc:{:.4f}'.format(epoch + 1, EPOCHS, vstep, np.ceil(len(train_patch_img_path_list)/BATCH_SIZE)-1, val_loss.result(), val_acc.result(), val_f1.result(), val_sp.result(), val_se.result(), val_precision.result(), val_auroc.result()),end="")
+    print(f"epoch: {epoch + 1}/{EPOCHS}, batch: {tstep}/{np.ceil(len(train_patch_img_path_list)/BATCH_SIZE)-1} ==> train_loss: {train_loss.result()}, train_acc: {train_acc.result()}, train_f1: {train_f1.result()}, train_sp: {train_sp.result()}, train_se: {train_se.result()}, train_precision: {train_precision.result()}, train_auroc: {train_auroc.result()}\nvalid_loss: {val_loss.result()}, valid_acc: {val_acc.result()}, valid_f1: {val_f1.result()}, valid_sp: {val_sp.result()}, valid_se: {val_se.result()}, val_precision: {val_precision.result()}, valid_auroc: {val_auroc.result()}\n##################")
+    if val_loss.result()<last_val_loss:
+      ckpt.save(checkpoint_path)
+      last_val_loss=val_loss.result()
+      #!cp DRIVE/ckpt drive/MyDrive/Colab/vision_ds/ -Rf
+'''
 lr_step=0
 last_val_loss=2e10
 with log_writer.as_default():
@@ -723,7 +746,8 @@ with log_writer.as_default():
     tf.summary.scalar("train_acc", train_acc.result(), step=epoch)
     log_writer.flush()
 
-# for training from last saved checkpoint:
+# for training from last saved checkpoint
+'''
 '''
 !cp drive/MyDrive/Colab/vision_ds/ckpt DRIVE/ -R
 ckpt.restore(tf.train.latest_checkpoint(checkpoint_path))

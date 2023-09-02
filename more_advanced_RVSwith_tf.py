@@ -672,6 +672,8 @@ def val_step(step,patch,groundtruth):
   #log_writer.flush()
 
 
+!cp drive/MyDrive/Colab/vision_ds/* DRIVE/ckpt/ -Rf
+ckpt.restore(tf.train.latest_checkpoint(checkpoint_path))
 print(f"Training starts from here:")
 print(f"***")
 lr_step=0

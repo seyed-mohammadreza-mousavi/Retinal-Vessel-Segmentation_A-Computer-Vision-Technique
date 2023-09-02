@@ -4,6 +4,7 @@
 #!cp drive/MyDrive/Colab/vision_ds/DRIVE ./ -R
 !git clone https://github.com/aAmohammadrezaaA/Retinal-Vessel-Segmentation_A-Computer-Vision-Technique.git
 %cd Retinal-Vessel-Segmentation_A-Computer-Vision-Technique/
+!git remote set-url origin https://aAmohammadrezaaA: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@github.com/aAmohammadrezaaA/Retinal-Vessel-Segmentation_A-Computer-Vision-Technique.git
 #!ls
 !pip install tqdm
 !pip install matplotlib
@@ -471,11 +472,14 @@ class Unet(tf.keras.Model):
 
     return x_linear,seg_result
     
-checkpoint_path=dataset_path+"ckpt/"
+checkpoint_dir=dataset_path+"ckpt/"
+epoch=-1;checkpoint_path=os.path.join(checkpoint_dir, f'model_epoch_{epoch+1}')
 #log_path=dataset_path+"logs/"
 
-if not os.path.exists(checkpoint_path):
-  os.mkdir(checkpoint_path)
+if not os.path.exists(checkpoint_dir):
+  os.mkdir(checkpoint_dir)
+if not os.path.exists('ckpt'):
+  os.mkdir('ckpt')
 
 #if not os.path.exists(log_path):
 #  os.mkdir(log_path)
@@ -670,9 +674,8 @@ def val_step(step,patch,groundtruth):
   #tf.summary.image("pred",pred_seg,step=step)
   #log_writer.flush()
 
-!rm DRIVE/ckpt/* -rf
-!cp ckpt/*  DRIVE/ckpt/ -Rf
-epoch=-1;checkpoint_path=os.path.join(checkpoint_path, f'model_Epoch_{epoch+1}.ckpt')
+!rm DRIVE/ckpt -rf
+!cp ckpt  DRIVE/ -Rf
 ckpt.restore(tf.train.latest_checkpoint(checkpoint_path))
 print(f"Training starts from here:")
 print(f"***")
@@ -700,14 +703,14 @@ for epoch in range(EPOCHS):
     print('\rvalidation results: batch {}, samples seen so far: {} ==> val_loss:{:.4f}, val_acc:{:.4f}, val_f1:{:.4f}, val_sp:{:.4f}, val_se:{:.4f}, val_precision:{:.4f}, val_auroc:{:.4f}'.format(vstep, tstep*BATCH_SIZE, val_loss.result(), val_acc.result(), val_f1.result(), val_sp.result(), val_se.result(), val_precision.result(), val_auroc.result()),end="")
     if val_loss.result()<last_val_loss:
       best_epoch=epoch+1
-      !rm -rf DRIVE/ckpt/*
+      !rm -rf DRIVE/ckpt/
       ckpt.save(checkpoint_path)
       last_val_loss=val_loss.result()
-      !rm -rf ckpt/*
-      !cp DRIVE/ckpt/* ckpt/* -R
-      !git add ckpt/*
-      !git commit -m "checkpoint_to_track"
-      !git push
+  !rm -rf ckpt/
+  !cp DRIVE/ckpt/ ckpt/ -R
+  !git add ckpt
+  !git commit -m "checkpoint_to_track"
+  !git push
   end_time_epoch = time.time()
   times = end_time_epoch-start_time_epoch;m, s = divmod(times, 60);h, m = divmod(m, 60)
   print(f"\n\nThis epoch took ({h}:{m}:{np.round(s)}).")

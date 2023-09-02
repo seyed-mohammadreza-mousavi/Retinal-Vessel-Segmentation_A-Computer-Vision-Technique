@@ -471,7 +471,7 @@ class Unet(tf.keras.Model):
     seg_result=self.act(self.bn_final(self.conv_final(x),training=training))
 
     return x_linear,seg_result
-
+    
 checkpoint_path=dataset_path+"ckpt/"
 log_path=dataset_path+"logs/"
 
@@ -671,7 +671,7 @@ def val_step(step,patch,groundtruth):
   #tf.summary.image("pred",pred_seg,step=step)
   #log_writer.flush()
 
-
+!rm DRIVE/ckpt/* -rf
 !cp drive/MyDrive/Colab/vision_ds/* DRIVE/ckpt/ -Rf
 ckpt.restore(tf.train.latest_checkpoint(checkpoint_path))
 print(f"Training starts from here:")
@@ -699,14 +699,13 @@ for epoch in range(EPOCHS):
     val_step(lr_step,patch,groundtruth)
     print('\rvalidation results: batch {}, samples seen so far: {} ==> val_loss:{:.4f}, val_acc:{:.4f}, val_f1:{:.4f}, val_sp:{:.4f}, val_se:{:.4f}, val_precision:{:.4f}, val_auroc:{:.4f}'.format(vstep, tstep*BATCH_SIZE, val_loss.result(), val_acc.result(), val_f1.result(), val_sp.result(), val_se.result(), val_precision.result(), val_auroc.result()),end="")
     if val_loss.result()<last_val_loss:
-      last_val_loss=val_loss.result()
       best_epoch=epoch+1
-    if val_loss.result()<last_val_loss:
-      !rm -rfv DRIVE/ckpt/*
+      !rm -rf DRIVE/ckpt/*
+	  checkpoint.save('path/to/checkpoint_dir/model_epoch{}.ckpt'.format(epoch))
       ckpt.save(checkpoint_path)
       last_val_loss=val_loss.result()
-      !rm -rfv drive/MyDrive/Colab/vision_ds/
-      !cp DRIVE/ckpt drive/MyDrive/Colab/vision_ds/ -Rf
+      !rm -rf drive/MyDrive/Colab/vision_ds/
+      !cp DRIVE/ckpt drive/MyDrive/Colab/vision_ds/ -R
   end_time_epoch = time.time()
   times = end_time_epoch-start_time_epoch;m, s = divmod(times, 60);h, m = divmod(m, 60)
   print(f"\n\nThis epoch took ({h}:{m}:{np.round(s)}).")

@@ -473,7 +473,7 @@ class Unet(tf.keras.Model):
     return x_linear,seg_result
     
 checkpoint_path=dataset_path+"ckpt/"
-log_path=dataset_path+"logs/"
+#log_path=dataset_path+"logs/"
 
 if not os.path.exists(checkpoint_path):
   os.mkdir(checkpoint_path)
@@ -680,6 +680,7 @@ lr_step=0
 last_val_loss=2e10
 best_epoch=-1
 for epoch in range(EPOCHS):
+  checkpoint_path=os.path.join(checkpoint_path, f'ckpt_epoch_{epoch+1}.ckpt')
   start_time_epoch = time.time()
   print(f"#####################################################################################################################################")
   print(f"start of epoch: {epoch+1}/{EPOCHS}, batch size: {BATCH_SIZE}, total batches per epoch: {(patch_num*20)//BATCH_SIZE}")
@@ -701,7 +702,6 @@ for epoch in range(EPOCHS):
     if val_loss.result()<last_val_loss:
       best_epoch=epoch+1
       !rm -rf DRIVE/ckpt/*
-	  checkpoint.save('path/to/checkpoint_dir/model_epoch{}.ckpt'.format(epoch))
       ckpt.save(checkpoint_path)
       last_val_loss=val_loss.result()
       !rm -rf drive/MyDrive/Colab/vision_ds/

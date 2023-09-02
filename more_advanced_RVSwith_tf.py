@@ -1,11 +1,10 @@
-from google.colab import drive
-drive.mount('/content/drive')
-
+!apt-get -qq install git
+!git config --global user.email "mohammadreza92299@gmail.com"
+!git config --global user.name "Seyed-Mohammadreza-Mousavi"
 #!cp drive/MyDrive/Colab/vision_ds/DRIVE ./ -R
 !git clone https://github.com/aAmohammadrezaaA/Retinal-Vessel-Segmentation_A-Computer-Vision-Technique.git
-!cp Retinal-Vessel-Segmentation_A-Computer-Vision-Technique/DRIVE ./ -R
+%cd Retinal-Vessel-Segmentation_A-Computer-Vision-Technique/
 #!ls
-
 !pip install tqdm
 !pip install matplotlib
 !pip install opencv-python
@@ -478,8 +477,8 @@ checkpoint_path=dataset_path+"ckpt/"
 if not os.path.exists(checkpoint_path):
   os.mkdir(checkpoint_path)
 
-if not os.path.exists(log_path):
-  os.mkdir(log_path)
+#if not os.path.exists(log_path):
+#  os.mkdir(log_path)
 
 def load_image_groundtruth(img_path,groundtruth_path):
   img=tf.io.read_file(img_path)
@@ -672,7 +671,8 @@ def val_step(step,patch,groundtruth):
   #log_writer.flush()
 
 !rm DRIVE/ckpt/* -rf
-!cp drive/MyDrive/Colab/vision_ds/* DRIVE/ckpt/ -Rf
+!cp ckpt/*  DRIVE/ckpt/ -Rf
+epoch=-1;checkpoint_path=os.path.join(checkpoint_path, f'model_Epoch_{epoch+1}.ckpt')
 ckpt.restore(tf.train.latest_checkpoint(checkpoint_path))
 print(f"Training starts from here:")
 print(f"***")
@@ -680,7 +680,6 @@ lr_step=0
 last_val_loss=2e10
 best_epoch=-1
 for epoch in range(EPOCHS):
-  checkpoint_path=os.path.join(checkpoint_path, f'ckpt_epoch_{epoch+1}.ckpt')
   start_time_epoch = time.time()
   print(f"#####################################################################################################################################")
   print(f"start of epoch: {epoch+1}/{EPOCHS}, batch size: {BATCH_SIZE}, total batches per epoch: {(patch_num*20)//BATCH_SIZE}")
@@ -704,8 +703,11 @@ for epoch in range(EPOCHS):
       !rm -rf DRIVE/ckpt/*
       ckpt.save(checkpoint_path)
       last_val_loss=val_loss.result()
-      !rm -rf drive/MyDrive/Colab/vision_ds/
-      !cp DRIVE/ckpt drive/MyDrive/Colab/vision_ds/ -R
+      !rm -rf ckpt/*
+      !cp DRIVE/ckpt/* ckpt/* -R
+      !git add ckpt/*
+      !git commit -m "checkpoint_to_track"
+      !git push
   end_time_epoch = time.time()
   times = end_time_epoch-start_time_epoch;m, s = divmod(times, 60);h, m = divmod(m, 60)
   print(f"\n\nThis epoch took ({h}:{m}:{np.round(s)}).")

@@ -716,8 +716,10 @@ for epoch in range(EPOCHS):
   if last_val_loss<global_last_val_loss:
     !rm -rf /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/
     !cp DRIVE/ckpt/ /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/ -R
-	print(f"\nnew checkpoint transferred to drive.")
+	print(f"\nvalidation results improved and new checkpoint transferred to drive.")
 	global_last_val_loss=last_val_loss
+  else:
+    print(f"\nresults did not improve in epoch {epoch+1}.")
   #!git add ckpt
   #!git commit -m "checkpoint_to_track"
   #!git push

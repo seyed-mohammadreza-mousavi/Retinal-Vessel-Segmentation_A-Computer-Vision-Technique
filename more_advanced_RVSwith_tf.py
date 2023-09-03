@@ -473,7 +473,7 @@ class Unet(tf.keras.Model):
     return x_linear,seg_result
     
 checkpoint_dir=dataset_path+"ckpt/"
-epoch=-1;checkpoint_path=os.path.join(checkpoint_dir, f'model_epoch_{epoch+1}')
+epoch=0;checkpoint_path=os.path.join(checkpoint_dir, f'model_epoch_{epoch+1}')
 #log_path=dataset_path+"logs/"
 
 if not os.path.exists(checkpoint_dir):

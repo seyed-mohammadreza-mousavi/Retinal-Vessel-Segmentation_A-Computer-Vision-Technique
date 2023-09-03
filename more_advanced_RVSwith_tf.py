@@ -618,7 +618,7 @@ train_auroc = tf.keras.metrics.Mean(name='train_auroc');val_auroc = tf.keras.met
 
 # checkpoint
 ckpt = tf.train.Checkpoint(optimizer=optimizer, model=model)
-ckpt_manager = tf.train.CheckpointManager(ckpt, checkpoint_path, max_to_keep=1)
+ckpt_manager = tf.train.CheckpointManager(ckpt, checkpoint_dir, max_to_keep=1)
 
 
 # tensorboard writer （Tensorboard）

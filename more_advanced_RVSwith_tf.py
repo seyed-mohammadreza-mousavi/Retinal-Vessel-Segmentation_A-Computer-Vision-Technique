@@ -473,13 +473,12 @@ class Unet(tf.keras.Model):
     return x_linear,seg_result
     
 checkpoint_dir=dataset_path+"ckpt/"
-epoch=0;checkpoint_path=os.path.join(checkpoint_dir, f'model_epoch_{epoch+1}')
 #log_path=dataset_path+"logs/"
 
 if not os.path.exists(checkpoint_dir):
   os.mkdir(checkpoint_dir)
-if not os.path.exists('ckpt'):
-  os.mkdir('ckpt')
+#if not os.path.exists('ckpt'):
+#  os.mkdir('ckpt')
 
 #if not os.path.exists(log_path):
 #  os.mkdir(log_path)
@@ -676,7 +675,7 @@ def val_step(step,patch,groundtruth):
 
 !rm DRIVE/ckpt -rf
 !cp ckpt  DRIVE/ -Rf
-ckpt.restore(tf.train.latest_checkpoint(checkpoint_path))
+ckpt.restore(tf.train.latest_checkpoint(checkpoint_dir))
 print(f"Training starts from here:")
 print(f"***")
 lr_step=0
@@ -704,6 +703,7 @@ for epoch in range(EPOCHS):
     if val_loss.result()<last_val_loss:
       best_epoch=epoch+1
       !rm -rf DRIVE/ckpt/
+	  checkpoint_path=os.path.join(checkpoint_dir, f'model_epoch_{epoch+1}')
       ckpt.save(checkpoint_path)
       last_val_loss=val_loss.result()
   !rm -rf ckpt/

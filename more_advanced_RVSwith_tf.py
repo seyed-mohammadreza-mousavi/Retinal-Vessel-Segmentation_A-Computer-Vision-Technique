@@ -719,7 +719,7 @@ for epoch in range(EPOCHS):
 	print(f"\nvalidation results improved and new checkpoint transferred to drive.")
 	global_last_val_loss=last_val_loss
   else:
-    print(f"\nresults did not improve in epoch {epoch+1}.")
+    print(f"\nresults did not improve in epoch {epoch+1}. The best results aquired at epoch {best_epoch}.")
   #!git add ckpt
   #!git commit -m "checkpoint_to_track"
   #!git push

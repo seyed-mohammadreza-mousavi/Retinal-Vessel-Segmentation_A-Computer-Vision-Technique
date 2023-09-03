@@ -673,17 +673,25 @@ def val_step(step,patch,groundtruth):
   #tf.summary.image("pred",pred_seg,step=step)
   #log_writer.flush()
 
-#!rm DRIVE/ckpt/ -rf
-#!cp /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/  DRIVE/ckpt/ -R
-#ckpt.restore(tf.train.latest_checkpoint(checkpoint_dir))
+# check here:
+!rm DRIVE/ckpt/ -rf
+!cp /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/  DRIVE/ckpt/ -R
+ckpt.restore(tf.train.latest_checkpoint(checkpoint_dir))
 print(f"Training starts from here:")
 print(f"***")
 lr_step=0
-last_val_loss=2e10
+# check here:
+#last_val_loss=2e10
+global_last_val_loss=last_val_loss=0.33045151829719543
+# check here:
 best_epoch=-1
+#best_epoch=50
+# check here:
+#for epoch in range(50, EPOCHS):
 for epoch in range(EPOCHS):
   start_time_epoch = time.time()
   print(f"#####################################################################################################################################")
+  # check here:
   print(f"start of epoch: {epoch+1}/{EPOCHS}, batch size: {BATCH_SIZE}, total batches per epoch: {(patch_num*20)//BATCH_SIZE}")
   print(f"lowest validation loss: {last_val_loss} which was at epoch {best_epoch}, total samples to see till the end of the epoch: {((patch_num*20)//BATCH_SIZE)*BATCH_SIZE}\n")
   # renew train recorder
@@ -699,15 +707,18 @@ for epoch in range(EPOCHS):
   print(f"#")
   for vstep, (patch,groundtruth) in enumerate(val_dataset):
     val_step(lr_step,patch,groundtruth)
-    print('\rvalidation results: batch {}, samples seen so far: {} ==> val_loss:{:.4f}, val_acc:{:.4f}, val_f1:{:.4f}, val_sp:{:.4f}, val_se:{:.4f}, val_precision:{:.4f}, val_auroc:{:.4f}'.format(vstep, tstep*BATCH_SIZE, val_loss.result(), val_acc.result(), val_f1.result(), val_sp.result(), val_se.result(), val_precision.result(), val_auroc.result()),end="")
+    print('\rvalidation results: batch {}, samples seen so far: {} ==> val_loss:{:.4f}, val_acc:{:.4f}, val_f1:{:.4f}, val_sp:{:.4f}, val_se:{:.4f}, val_precision:{:.4f}, val_auroc:{:.4f}'.format(vstep, vstep*BATCH_SIZE, val_loss.result(), val_acc.result(), val_f1.result(), val_sp.result(), val_se.result(), val_precision.result(), val_auroc.result()),end="")
     if val_loss.result()<last_val_loss:
       best_epoch=epoch+1
       !rm -rf DRIVE/ckpt/
-      checkpoint_path=os.path.join(checkpoint_dir, f'ep-{epoch+1}_va-{val_loss.result()}-')
+      checkpoint_path=os.path.join(checkpoint_dir, f'ep-{epoch+1}_va-{val_loss.result()}')
       ckpt.save(checkpoint_path)
       last_val_loss=val_loss.result()
-      !rm -rf /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/
-      !cp DRIVE/ckpt/ /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/ -R
+  if last_val_loss<global_last_val_loss:
+    !rm -rf /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/
+    !cp DRIVE/ckpt/ /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/ -R
+	print(f"\nnew checkpoint transferred to drive.")
+	global_last_val_loss=last_val_loss
   #!git add ckpt
   #!git commit -m "checkpoint_to_track"
   #!git push

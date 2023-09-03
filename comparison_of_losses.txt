@@ -1,7 +1,9 @@
 Results with crossentropy:
-epoch 36/200, batch 468/468 ==> val_loss:0.2245, val_acc:0.7899, val_f1:0.4840, val_sp:0.7748, val_se:0.7748, val_precision:0.7740, val_auroc:0.7748
-epoch 37/200, batch 468/468 ==> train_loss:0.0431, train_acc:0.9160, train_f1:0.5930, train_sp:0.8784, train_se:0.8784, train_precision:0.8776, train_auroc:0.8784
-epoch 38/200, batch 468/468 ==> train_loss:0.0407, train_acc:0.9209, train_f1:0.5972, train_sp:0.8859, train_se:0.8859, train_precision:0.8852, train_auroc:0.8859
+start of epoch: 30/200, batch size: 64, total batches per epoch: 468
+lowest validation loss: 0.2088022381067276 which was at epoch 27, total samples to see till the end of the epoch: 29952
+
+training results: batch 468, samples seen so far: 29952:  ==> train_loss:0.0614, train_acc:0.8796, train_f1:0.5619, train_sp:0.8216, train_se:0.8216, train_precision:0.8209, train_auroc:0.8216#
+validation results: batch 468, samples seen so far: 29952 ==> val_loss:0.2128, val_acc:0.7675, val_f1:0.4652, val_sp:0.7432, val_se:0.7432, val_precision:0.7422, val_auroc:0.7432
 ===========================================================================
 Results with dice_loss:
 epoch 34/200, batch 468/468 ==> val_loss:0.1992, val_acc:0.8008, val_f1:0.4933, val_sp:0.8016, val_se:0.8016, val_precision:0.8011, val_auroc:0.8016

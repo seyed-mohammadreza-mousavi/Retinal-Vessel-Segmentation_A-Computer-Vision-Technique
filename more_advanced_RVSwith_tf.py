@@ -673,9 +673,9 @@ def val_step(step,patch,groundtruth):
   #tf.summary.image("pred",pred_seg,step=step)
   #log_writer.flush()
 
-!rm DRIVE/ckpt -rf
-!cp ckpt  DRIVE/ -Rf
-ckpt.restore(tf.train.latest_checkpoint(checkpoint_dir))
+#!rm DRIVE/ckpt/ -rf
+#!cp /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/  DRIVE/ckpt/ -R
+#ckpt.restore(tf.train.latest_checkpoint(checkpoint_dir))
 print(f"Training starts from here:")
 print(f"***")
 lr_step=0
@@ -703,14 +703,14 @@ for epoch in range(EPOCHS):
     if val_loss.result()<last_val_loss:
       best_epoch=epoch+1
       !rm -rf DRIVE/ckpt/
-	  checkpoint_path=os.path.join(checkpoint_dir, f'model_epoch_{epoch+1}')
+      checkpoint_path=os.path.join(checkpoint_dir, f'ep-{epoch+1}_va-{val_loss.result()}-')
       ckpt.save(checkpoint_path)
       last_val_loss=val_loss.result()
-  !rm -rf ckpt/
-  !cp DRIVE/ckpt/ ckpt/ -R
-  !git add ckpt
-  !git commit -m "checkpoint_to_track"
-  !git push
+      !rm -rf /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/
+      !cp DRIVE/ckpt/ /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/ -R
+  #!git add ckpt
+  #!git commit -m "checkpoint_to_track"
+  #!git push
   end_time_epoch = time.time()
   times = end_time_epoch-start_time_epoch;m, s = divmod(times, 60);h, m = divmod(m, 60)
   print(f"\n\nThis epoch took ({h}:{m}:{np.round(s)}).")

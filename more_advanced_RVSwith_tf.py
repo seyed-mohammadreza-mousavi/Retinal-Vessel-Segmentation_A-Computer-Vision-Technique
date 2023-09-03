@@ -691,7 +691,6 @@ best_epoch=-1
 for epoch in range(EPOCHS):
   start_time_epoch = time.time()
   print(f"#####################################################################################################################################")
-  # check here:
   print(f"start of epoch: {epoch+1}/{EPOCHS}, batch size: {BATCH_SIZE}, total batches per epoch: {(patch_num*20)//BATCH_SIZE}")
   print(f"lowest validation loss: {last_val_loss} which was at epoch {best_epoch}, total samples to see till the end of the epoch: {((patch_num*20)//BATCH_SIZE)*BATCH_SIZE}\n")
   # renew train recorder
@@ -724,7 +723,7 @@ for epoch in range(EPOCHS):
   #!git push
   end_time_epoch = time.time()
   times = end_time_epoch-start_time_epoch;m, s = divmod(times, 60);h, m = divmod(m, 60)
-  print(f"\n\nThis epoch took ({h}:{m}:{np.round(s)}).")
+  print(f"\nThis epoch took ({h}:{m}:{np.round(s)}).")
 print(f"\nend of training\n")
   
 '''

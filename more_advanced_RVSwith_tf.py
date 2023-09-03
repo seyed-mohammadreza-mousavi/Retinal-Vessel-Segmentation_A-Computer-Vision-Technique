@@ -720,6 +720,8 @@ for epoch in range(EPOCHS):
 	global_last_val_loss=last_val_loss
   else:
     print(f"\nresults did not improve in epoch {epoch+1}. The best results aquired at epoch {best_epoch}.")
+	trained_till_epoch=f'/content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/trained_till_epoch_{epoch+1}'
+	!touch "$trained_till_epoch"
   #!git add ckpt
   #!git commit -m "checkpoint_to_track"
   #!git push

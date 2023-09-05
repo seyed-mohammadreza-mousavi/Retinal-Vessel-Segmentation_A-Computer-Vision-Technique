@@ -26,6 +26,9 @@ import getpass
 #!google-drive-ocamlfuse -headless -id={creds.client_id} -secret={creds.client_secret} < /dev/null 2>&1 | grep URL
 #vcode = getpass.getpass()
 #!echo {vcode} | google-drive-ocamlfuse -headless -id={creds.client_id} -secret={creds.client_secret}
+#clearing output in colab
+from IPython.display import clear_output
+clear_output()
 
 from glob import glob
 from tqdm import tqdm

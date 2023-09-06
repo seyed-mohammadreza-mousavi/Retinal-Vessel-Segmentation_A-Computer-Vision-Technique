@@ -27,8 +27,6 @@ import getpass
 #vcode = getpass.getpass()
 #!echo {vcode} | google-drive-ocamlfuse -headless -id={creds.client_id} -secret={creds.client_secret}
 #clearing output in colab
-from IPython.display import clear_output
-clear_output()
 
 from glob import glob
 from tqdm import tqdm
@@ -676,15 +674,17 @@ def val_step(step,patch,groundtruth):
   #tf.summary.image("pred",pred_seg,step=step)
   #log_writer.flush()
 
+from IPython.display import clear_output
+clear_output()
+
 # check here:
 !rm DRIVE/ckpt/ -rf
 !cp /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/  DRIVE/ckpt/ -R
 ckpt.restore(tf.train.latest_checkpoint(checkpoint_dir))
-print(f"Training starts from here:")
-print(f"***")
+print(f"Training starts from here:\n")
 lr_step=0
 # check here:
-#last_val_loss=2e10
+#last_val_loss=global_last_val_loss=2e10
 global_last_val_loss=last_val_loss=0.33045151829719543
 # check here:
 best_epoch=-1
@@ -693,9 +693,13 @@ best_epoch=-1
 #for epoch in range(50, EPOCHS):
 for epoch in range(EPOCHS):
   start_time_epoch = time.time()
-  print(f"#####################################################################################################################################")
-  print(f"start of epoch: {epoch+1}/{EPOCHS}, batch size: {BATCH_SIZE}, total batches per epoch: {(patch_num*20)//BATCH_SIZE}")
-  print(f"lowest validation loss: {last_val_loss} which was at epoch {best_epoch}, total samples to see till the end of the epoch: {((patch_num*20)//BATCH_SIZE)*BATCH_SIZE}\n")
+  total_batches_per_epoch =  ((patch_num*20)//BATCH_SIZE)
+  total_sam_till_end_of_epoch=((patch_num*20)//BATCH_SIZE)*BATCH_SIZE
+  data = [["start of epoch", f"{epoch+1}/{EPOCHS}"], ["batch_size", BATCH_SIZE],
+          ["total batches per epoch", total_batches_per_epoch],
+		  [f"lowest val_loss till now {last_val_loss} which was at epoch", best_epoch],
+		  ["total samples to see till the end of the epoch", total_sam_till_end_of_epoch], ]
+  col_names = ["#", "start of epoch Info", "values"]
   # renew train recorder
   train_loss.reset_states();train_acc.reset_states();train_f1.reset_states()
   train_sp.reset_states();train_se.reset_states();train_precision.reset_states();train_auroc.reset_states()
@@ -706,7 +710,11 @@ for epoch in range(EPOCHS):
   for tstep, (patch,groundtruth) in enumerate(train_dataset):
     train_step(lr_step,patch,groundtruth)
     print('\rtraining results: batch {}, samples seen so far: {}:  ==> train_loss:{:.4f}, train_acc:{:.4f}, train_f1:{:.4f}, train_sp:{:.4f}, train_se:{:.4f}, train_precision:{:.4f}, train_auroc:{:.4f}'.format(tstep, tstep*BATCH_SIZE, train_loss.result(), train_acc.result(), train_f1.result(), train_sp.result(), train_se.result(), train_precision.result(), train_auroc.result()),end="")
-  print(f"#")
+  print(f"\n")
+  columns = [f"train parameters at end of epoch {epoch+1}", f"train values at epoch {epoch+1}"];myTab = PrettyTable();samples_seen_so_far=tstep*BATCH_SIZE;
+  myTab.add_column(columns[0], ["loss", "acc", "f1", "specificity", "sensitivity", "precision", "auroc"])
+  myTab.add_column(columns[1], [train_loss.result().numpy(), train_acc.result().numpy(), train_f1.result().numpy(), train_sp.result().numpy(), train_se.result().numpy(), train_precision.result().numpy(), train_auroc.result().numpy()])
+  print(myTab)
   for vstep, (patch,groundtruth) in enumerate(val_dataset):
     val_step(lr_step,patch,groundtruth)
     print('\rvalidation results: batch {}, samples seen so far: {} ==> val_loss:{:.4f}, val_acc:{:.4f}, val_f1:{:.4f}, val_sp:{:.4f}, val_se:{:.4f}, val_precision:{:.4f}, val_auroc:{:.4f}'.format(vstep, vstep*BATCH_SIZE, val_loss.result(), val_acc.result(), val_f1.result(), val_sp.result(), val_se.result(), val_precision.result(), val_auroc.result()),end="")
@@ -716,21 +724,26 @@ for epoch in range(EPOCHS):
       checkpoint_path=os.path.join(checkpoint_dir, f'ep-{epoch+1}_va-{val_loss.result()}')
       ckpt.save(checkpoint_path)
       last_val_loss=val_loss.result()
+  print("\n")
+  columns = [f"validation parameters at end of epoch {epoch+1}", f"validation values at epoch {epoch+1}"];myTab = PrettyTable();samples_seen_so_far=tstep*BATCH_SIZE;
+  myTab.add_column(columns[0], ["val_loss", "val_acc", "val_f1", "val_specificity", "val_sensitivity", "val_precision", "val_auroc"])
+  myTab.add_column(columns[1], [val_loss.result().numpy(), val_acc.result().numpy(), val_f1.result().numpy(), val_sp.result().numpy(), val_se.result().numpy(), val_precision.result().numpy(), val_auroc.result().numpy()])
+  print(myTab) 
   if last_val_loss<global_last_val_loss:
     !rm -rf /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/
     !cp DRIVE/ckpt/ /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/ -R
 	print(f"\nvalidation results improved and new checkpoint transferred to drive.")
 	global_last_val_loss=last_val_loss
   else:
-    print(f"\nresults did not improve in epoch {epoch+1}. The best results aquired at epoch {best_epoch}.")
-	trained_till_epoch=f'/content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/trained_till_epoch_{epoch+1}'
-	!touch "$trained_till_epoch"
-  #!git add ckpt
-  #!git commit -m "checkpoint_to_track"
-  #!git push
+    print(f"\nresults did not improve in epoch {epoch+1}. The best results acquired at epoch {best_epoch}.")
+    trained_till_epoch=f'/content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/trained_till_epoch_{epoch+1}'
+    !touch "$trained_till_epoch"
+    #!git add ckpt
+    #!git commit -m "checkpoint_to_track"
+    #!git push
   end_time_epoch = time.time()
   times = end_time_epoch-start_time_epoch;m, s = divmod(times, 60);h, m = divmod(m, 60)
-  print(f"\nThis epoch took ({h}:{m}:{np.round(s)}).")
+  print(f"\nThis epoch took ({h}:{m}:{np.round(s)}).\nend of epoch{epoch+1}\n#################################################################################################################")
 print(f"\nend of training\n")
   
 '''

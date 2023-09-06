@@ -714,7 +714,7 @@ for epoch in range(EPOCHS):
     train_step(lr_step,patch,groundtruth)
     print('\rtraining results: batch {}, samples seen so far: {}:  ==> train_loss:{:.4f}, train_acc:{:.4f}, train_f1:{:.4f}, train_sp:{:.4f}, train_se:{:.4f}, train_precision:{:.4f}, train_auroc:{:.4f}'.format(tstep, tstep*BATCH_SIZE, train_loss.result(), train_acc.result(), train_f1.result(), train_sp.result(), train_se.result(), train_precision.result(), train_auroc.result()),end="")
   print(f"\n")
-  columns = [f"train parameters at end of epoch {epoch+1}", f"train values at epoch {epoch+1}"];myTab = PrettyTable();samples_seen_so_far=tstep*BATCH_SIZE;
+  columns = [f"train metrics at end of epoch {epoch+1}", f"train values at epoch {epoch+1}"];myTab = PrettyTable();samples_seen_so_far=tstep*BATCH_SIZE;
   myTab.add_column(columns[0], ["loss", "acc", "f1", "specificity", "sensitivity", "precision", "auroc"])
   myTab.add_column(columns[1], [train_loss.result().numpy(), train_acc.result().numpy(), train_f1.result().numpy(), train_sp.result().numpy(), train_se.result().numpy(), train_precision.result().numpy(), train_auroc.result().numpy()])
   print(myTab)
@@ -728,14 +728,14 @@ for epoch in range(EPOCHS):
       ckpt.save(checkpoint_path)
       last_val_loss=val_loss.result()
   print("\n")
-  columns = [f"validation parameters at end of epoch {epoch+1}", f"validation values at epoch {epoch+1}"];myTab = PrettyTable();samples_seen_so_far=tstep*BATCH_SIZE;
+  columns = [f"validation metrics at end of epoch {epoch+1}", f"validation values at epoch {epoch+1}"];myTab = PrettyTable();samples_seen_so_far=tstep*BATCH_SIZE;
   myTab.add_column(columns[0], ["val_loss", "val_acc", "val_f1", "val_specificity", "val_sensitivity", "val_precision", "val_auroc"])
   myTab.add_column(columns[1], [val_loss.result().numpy(), val_acc.result().numpy(), val_f1.result().numpy(), val_sp.result().numpy(), val_se.result().numpy(), val_precision.result().numpy(), val_auroc.result().numpy()])
   print(myTab) 
   if last_val_loss<global_last_val_loss:
     !rm -rf /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/
     !cp DRIVE/ckpt/ /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/ -R
-	print(f"\nvalidation results improved and new checkpoint transferred to drive.")
+	print(f"\nvalidation results improved and new checkpoint will be transferred to drive if the path exists.")
 	global_last_val_loss=last_val_loss
   else:
     print(f"\nresults did not improve in epoch {epoch+1}. The best results acquired at epoch {best_epoch}.")

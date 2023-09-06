@@ -30,6 +30,7 @@ import getpass
 
 from glob import glob
 from tqdm import tqdm
+from prettytable import PrettyTable
 import matplotlib.pyplot as plt
 from IPython import display
 import numpy as np

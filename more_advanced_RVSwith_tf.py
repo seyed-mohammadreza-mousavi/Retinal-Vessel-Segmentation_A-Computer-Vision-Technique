@@ -681,16 +681,18 @@ from IPython.display import clear_output
 clear_output()
 
 # check here:
-!rm DRIVE/ckpt/ -rf
-!cp /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/  DRIVE/ckpt/ -R
-ckpt.restore(tf.train.latest_checkpoint(checkpoint_dir))
+#!rm DRIVE/ckpt/ -rf
+#!cp /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/  DRIVE/ckpt/ -R
+#ckpt.restore(tf.train.latest_checkpoint(checkpoint_dir))
 print(f"Training starts from here:\n")
 lr_step=0
 # check here:
-#last_val_loss=global_last_val_loss=2e10
-global_last_val_loss=last_val_loss=0.33045151829719543
+last_val_loss=global_last_val_loss=2e10
+#global_last_val_loss=last_val_loss=0.33045151829719543
+last_val_acc=last_val_f1=last_val_sp=last_val_se=last_val_prec=last_val_auroc=0
+
 # check here:
-best_epoch=-1
+best_epoch=e_acc=e_f1=e_sp=e_se=e_prec=e_auroc=-1
 #best_epoch=50
 # check here:
 #for epoch in range(50, EPOCHS):
@@ -700,9 +702,16 @@ for epoch in range(EPOCHS):
   total_sam_till_end_of_epoch=((patch_num*20)//BATCH_SIZE)*BATCH_SIZE
   data = [["start of epoch", f"{epoch+1}/{EPOCHS}"], ["batch_size", BATCH_SIZE],
           ["total batches per epoch", total_batches_per_epoch],
-		  [f"lowest val_loss till now {last_val_loss} which was at epoch", best_epoch],
+		  [f"lowest val_loss at epoch {best_epoch}", last_val_loss],
+		  [f"highest val_acc at epoch {e_acc}", last_val_acc],
+      [f"highest val_f1 at epoch {e_f1}", last_val_f1],
+      [f"highest val_sp at epoch {e_sp}", last_val_sp],
+      [f"highest val_se at epoch {e_se}", last_val_se],
+      [f"highest val_precision at epoch {e_prec}", last_val_prec],
+      [f"highest val_auroc at epoch {e_auroc}", last_val_auroc],
 		  ["total samples to see till the end of the epoch", total_sam_till_end_of_epoch], ]
   col_names = ["#", "start of epoch Info", "values"]
+  print(tabulate(data, headers=col_names,tablefmt="fancy_grid"))
   # renew train recorder
   train_loss.reset_states();train_acc.reset_states();train_f1.reset_states()
   train_sp.reset_states();train_se.reset_states();train_precision.reset_states();train_auroc.reset_states()
@@ -726,7 +735,28 @@ for epoch in range(EPOCHS):
       !rm -rf DRIVE/ckpt/
       checkpoint_path=os.path.join(checkpoint_dir, f'ep-{epoch+1}_va-{val_loss.result()}')
       ckpt.save(checkpoint_path)
-      last_val_loss=val_loss.result()
+      last_val_loss=val_loss.result().numpy()
+    if val_acc.result()>last_val_acc:
+      e_acc=epoch+1
+      last_val_acc=val_acc.result().numpy()
+    if val_f1.result()>last_val_f1:
+      e_f1=epoch+1
+      last_val_f1=val_f1.result().numpy()
+    if val_sp.result()>last_val_sp:
+      e_sp=epoch+1
+      last_val_sp=val_sp.result().numpy()
+    if val_se.result()>last_val_se:
+      e_se=epoch+1
+      last_val_se=val_se.result().numpy()
+    if val_se.result()>last_val_se:
+      e_se=epoch+1
+      last_val_se=val_se.result().numpy()
+    if val_precision.result()>last_val_prec:
+      e_prec=epoch+1
+      last_val_prec=val_precision.result().numpy()
+    if val_auroc.result()>last_val_auroc:
+      e_auroc=epoch+1
+      last_val_auroc=val_auroc.result().numpy()
   print("\n")
   columns = [f"validation metrics at end of epoch {epoch+1}", f"validation values at epoch {epoch+1}"];myTab = PrettyTable();samples_seen_so_far=tstep*BATCH_SIZE;
   myTab.add_column(columns[0], ["val_loss", "val_acc", "val_f1", "val_specificity", "val_sensitivity", "val_precision", "val_auroc"])
@@ -735,8 +765,8 @@ for epoch in range(EPOCHS):
   if last_val_loss<global_last_val_loss:
     !rm -rf /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/
     !cp DRIVE/ckpt/ /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/ -R
-	print(f"\nvalidation results improved and new checkpoint will be transferred to drive if the path exists.")
-	global_last_val_loss=last_val_loss
+    print(f"\nvalidation results improved and new checkpoint will be transferred to drive if the path exists.")
+    global_last_val_loss=last_val_loss
   else:
     print(f"\nresults did not improve in epoch {epoch+1}. The best results acquired at epoch {best_epoch}.")
     trained_till_epoch=f'/content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/trained_till_epoch_{epoch+1}'

@@ -702,13 +702,13 @@ for epoch in range(EPOCHS):
   total_sam_till_end_of_epoch=((patch_num*20)//BATCH_SIZE)*BATCH_SIZE
   data = [["start of epoch", f"{epoch+1}/{EPOCHS}"], ["batch_size", BATCH_SIZE],
           ["total batches per epoch", total_batches_per_epoch],
-		  [f"lowest val_loss at epoch {best_epoch}", last_val_loss],
-		  [f"highest val_acc at epoch {e_acc}", last_val_acc],
-      [f"highest val_f1 at epoch {e_f1}", last_val_f1],
-      [f"highest val_sp at epoch {e_sp}", last_val_sp],
-      [f"highest val_se at epoch {e_se}", last_val_se],
-      [f"highest val_precision at epoch {e_prec}", last_val_prec],
-      [f"highest val_auroc at epoch {e_auroc}", last_val_auroc],
+		  [f"lowest val_loss occured at epoch {best_epoch}", last_val_loss],
+		  [f"highest val_acc occured at epoch {e_acc}", last_val_acc],
+          [f"highest val_f1 occured at epoch {e_f1}", last_val_f1],
+          [f"highest val_sp occured at epoch {e_sp}", last_val_sp],
+          [f"highest val_se occured at epoch {e_se}", last_val_se],
+          [f"highest val_precision occured at epoch {e_prec}", last_val_prec],
+          [f"highest val_auroc occured at epoch {e_auroc}", last_val_auroc],
 		  ["total samples to see till the end of the epoch", total_sam_till_end_of_epoch], ]
   col_names = ["#", "start of epoch Info", "values"]
   print(tabulate(data, headers=col_names,tablefmt="fancy_grid"))

@@ -681,36 +681,40 @@ from IPython.display import clear_output
 clear_output()
 
 # check here:
-#!rm DRIVE/ckpt/ -rf
-#!cp /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/  DRIVE/ckpt/ -R
-#ckpt.restore(tf.train.latest_checkpoint(checkpoint_dir))
+!rm DRIVE/ckpt/ -rf
+!cp /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/  DRIVE/ckpt/ -R
+ckpt.restore(tf.train.latest_checkpoint(checkpoint_dir))
 print(f"Training starts from here:\n")
 lr_step=0
 # check here:
 last_val_loss=global_last_val_loss=2e10
-#global_last_val_loss=last_val_loss=0.33045151829719543
-last_val_acc=last_val_f1=last_val_sp=last_val_se=last_val_prec=last_val_auroc=0
+#global_last_val_loss=last_val_loss=0.2046002298593521
+last_val_acc=global_last_val_acc=last_val_f1=global_last_val_f1=last_val_sp=global_last_val_sp=last_val_se=global_last_val_se=last_val_prec=global_last_val_prec=last_val_auroc=global_last_val_auroc=0
 
 # check here:
-best_epoch=epoch=e_acc=e_f1=e_sp=e_se=e_prec=e_auroc=-1
-#best_epoch=50
+e_loss=epoch=e_acc=e_f1=e_sp=e_se=e_prec=e_auroc=-1
+#e_loss=24;epoch=-1;e_acc=-1;e_f1=-1;e_sp=-1;e_se=-1;e_prec=-1;e_auroc=-1;
+#best_epoch=26
+best_epoch=0
 # check here:
-#for epoch in range(50, EPOCHS):
-for epoch in range(EPOCHS):
-  start_time_epoch = time.time()
+for epoch in range(24, EPOCHS):
   trained_till_epoch=f'/content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/trained_till_epoch_{epoch+1}'
+  last_epoch_number = f'/content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/trained_till_epoch_{epoch}'
+#for epoch in range(EPOCHS):
+  start_time_epoch = time.time()
   total_batches_per_epoch =  ((patch_num*20)//BATCH_SIZE)
   total_sam_till_end_of_epoch=((patch_num*20)//BATCH_SIZE)*BATCH_SIZE
   data = [["start of epoch", f"{epoch+1}/{EPOCHS}"], ["batch_size", BATCH_SIZE],
           ["total batches per epoch", total_batches_per_epoch],
-		  [f"lowest val_loss occured at epoch {best_epoch}", last_val_loss],
+		  [f"lowest val_loss occured at epoch {e_loss}", last_val_loss],
 		  [f"highest val_acc occured at epoch {e_acc}", last_val_acc],
           [f"highest val_f1 occured at epoch {e_f1}", last_val_f1],
           [f"highest val_sp occured at epoch {e_sp}", last_val_sp],
           [f"highest val_se occured at epoch {e_se}", last_val_se],
           [f"highest val_precision occured at epoch {e_prec}", last_val_prec],
           [f"highest val_auroc occured at epoch {e_auroc}", last_val_auroc],
-		  ["total samples to see till the end of the epoch", total_sam_till_end_of_epoch], ]
+		  ["total samples to see till the end of the epoch", total_sam_till_end_of_epoch],
+          ["best results occured at epoch", best_epoch]]
   col_names = ["#", "start of epoch Info", "values"]
   print(tabulate(data, headers=col_names,tablefmt="fancy_grid"))
   # renew train recorder
@@ -732,10 +736,6 @@ for epoch in range(EPOCHS):
     val_step(lr_step,patch,groundtruth)
     print('\rvalidation results: batch {}, samples seen so far: {} ==> val_loss:{:.4f}, val_acc:{:.4f}, val_f1:{:.4f}, val_sp:{:.4f}, val_se:{:.4f}, val_precision:{:.4f}, val_auroc:{:.4f}'.format(vstep, vstep*BATCH_SIZE, val_loss.result(), val_acc.result(), val_f1.result(), val_sp.result(), val_se.result(), val_precision.result(), val_auroc.result()),end="")
     if val_loss.result()<last_val_loss:
-      best_epoch=epoch+1
-      !rm -rf DRIVE/ckpt/
-      checkpoint_path=os.path.join(checkpoint_dir, f'ep-{epoch+1}_va-{val_loss.result()}')
-      ckpt.save(checkpoint_path)
       last_val_loss=val_loss.result().numpy()
     if val_acc.result()>last_val_acc:
       e_acc=epoch+1
@@ -758,25 +758,25 @@ for epoch in range(EPOCHS):
     if val_auroc.result()>last_val_auroc:
       e_auroc=epoch+1
       last_val_auroc=val_auroc.result().numpy()
+  if (val_loss.result()<global_last_val_loss) or (val_acc.result()>global_last_val_acc) or (val_f1.result()>global_last_val_f1) or (val_sp.result()>global_last_val_sp) or (val_se.result()>global_last_val_se) or (val_precision.result()>global_last_val_prec) or (val_auroc.result()>global_last_val_auroc):
+    best_epoch=epoch+1
+    !rm -rf DRIVE/ckpt/
+    checkpoint_path=os.path.join(checkpoint_dir, f'ep-{epoch+1}_va-{val_loss.result()}')
+    ckpt.save(checkpoint_path)
+    !rm -rf /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/
+    !rm -rf "$last_epoch_number"
+    !cp DRIVE/ckpt/ /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/ -R
+    print(f"\nAt least validation metrics improved and new checkpoint will be transferred to drive if the path exists.")
+    !touch "$trained_till_epoch"
+  else:
+    print(f"\nNone of val_metrics improved in epoch {epoch+1}. The best results acquired was at epoch {best_epoch}.")
+    !rm -rf "$last_epoch_number"
+    !touch "$trained_till_epoch"
   print("\n")
   columns = [f"validation metrics at end of epoch {epoch+1}", f"validation values at end of epoch {epoch+1}"];myTab = PrettyTable();samples_seen_so_far=tstep*BATCH_SIZE;
   myTab.add_column(columns[0], ["val_loss", "val_acc", "val_f1", "val_specificity", "val_sensitivity", "val_precision", "val_auroc"])
   myTab.add_column(columns[1], [val_loss.result().numpy(), val_acc.result().numpy(), val_f1.result().numpy(), val_sp.result().numpy(), val_se.result().numpy(), val_precision.result().numpy(), val_auroc.result().numpy()])
-  print(myTab) 
-  if last_val_loss<global_last_val_loss:
-    !rm -rf trained_till_epoch
-    !rm -rf /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/
-    !cp DRIVE/ckpt/ /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/ -R
-    print(f"\nvalidation results improved and new checkpoint will be transferred to drive if the path exists.")
-    global_last_val_loss=last_val_loss
-    !touch "$trained_till_epoch"
-  else:
-    print(f"\nresults did not improve in epoch {epoch+1}. The best results acquired for val_loss at epoch {best_epoch}.")
-    !rm -rf trained_till_epoch
-    !touch "$trained_till_epoch"
-    #!git add ckpt
-    #!git commit -m "checkpoint_to_track"
-    #!git push
+  print(myTab)
   end_time_epoch = time.time()
   times = end_time_epoch-start_time_epoch;m, s = divmod(times, 60);h, m = divmod(m, 60)
   print(f"\nThis epoch took ({h}:{m}:{np.round(s)}).\nend of epoch{epoch+1}\n#################################################################################################################")

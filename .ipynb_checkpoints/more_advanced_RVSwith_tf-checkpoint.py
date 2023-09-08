@@ -687,17 +687,16 @@ ckpt.restore(tf.train.latest_checkpoint(checkpoint_dir))
 print(f"Training starts from here:\n")
 lr_step=0
 # check here:
-last_val_loss=global_last_val_loss=2e10
-#global_last_val_loss=last_val_loss=0.2046002298593521
+#last_val_loss=global_last_val_loss=2e10
+global_last_val_loss=last_val_loss=0.4837116777896881
 last_val_acc=global_last_val_acc=last_val_f1=global_last_val_f1=last_val_sp=global_last_val_sp=last_val_se=global_last_val_se=last_val_prec=global_last_val_prec=last_val_auroc=global_last_val_auroc=0
 
 # check here:
-e_loss=epoch=e_acc=e_f1=e_sp=e_se=e_prec=e_auroc=-1
-#e_loss=24;epoch=-1;e_acc=-1;e_f1=-1;e_sp=-1;e_se=-1;e_prec=-1;e_auroc=-1;
-#best_epoch=26
-best_epoch=0
+#e_loss=epoch=e_acc=e_f1=e_sp=e_se=e_prec=e_auroc=-1
+e_loss=40;epoch=-1;e_acc=-1;e_f1=-1;e_sp=-1;e_se=-1;e_prec=-1;e_auroc=-1;
+best_epoch=63
 # check here:
-for epoch in range(24, EPOCHS):
+for epoch in range(70, EPOCHS):
   trained_till_epoch=f'/content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/trained_till_epoch_{epoch+1}'
   last_epoch_number = f'/content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/trained_till_epoch_{epoch}'
 #for epoch in range(EPOCHS):
@@ -728,55 +727,119 @@ for epoch in range(24, EPOCHS):
     train_step(lr_step,patch,groundtruth)
     print('\rtraining results: batch {}, samples seen so far: {}:  ==> train_loss:{:.4f}, train_acc:{:.4f}, train_f1:{:.4f}, train_sp:{:.4f}, train_se:{:.4f}, train_precision:{:.4f}, train_auroc:{:.4f}'.format(tstep, tstep*BATCH_SIZE, train_loss.result(), train_acc.result(), train_f1.result(), train_sp.result(), train_se.result(), train_precision.result(), train_auroc.result()),end="")
   print(f"\n")
-  columns = [f"train metrics at end of epoch {epoch+1}", f"train values at end of epoch {epoch+1}"];myTab = PrettyTable();samples_seen_so_far=tstep*BATCH_SIZE;
+  columns = [f"train metrics at end of epoch {epoch+1}", f"train values at end of epoch {epoch+1}"];myTab = PrettyTable();
   myTab.add_column(columns[0], ["loss", "acc", "f1", "specificity", "sensitivity", "precision", "auroc"])
   myTab.add_column(columns[1], [train_loss.result().numpy(), train_acc.result().numpy(), train_f1.result().numpy(), train_sp.result().numpy(), train_se.result().numpy(), train_precision.result().numpy(), train_auroc.result().numpy()])
   print(myTab)
   for vstep, (patch,groundtruth) in enumerate(val_dataset):
     val_step(lr_step,patch,groundtruth)
     print('\rvalidation results: batch {}, samples seen so far: {} ==> val_loss:{:.4f}, val_acc:{:.4f}, val_f1:{:.4f}, val_sp:{:.4f}, val_se:{:.4f}, val_precision:{:.4f}, val_auroc:{:.4f}'.format(vstep, vstep*BATCH_SIZE, val_loss.result(), val_acc.result(), val_f1.result(), val_sp.result(), val_se.result(), val_precision.result(), val_auroc.result()),end="")
-    if val_loss.result()<last_val_loss:
+    if val_loss.result().numpy()<last_val_loss:
+      e_loss=epoch+1
       last_val_loss=val_loss.result().numpy()
-    if val_acc.result()>last_val_acc:
+    if val_acc.result().numpy()>last_val_acc:
       e_acc=epoch+1
       last_val_acc=val_acc.result().numpy()
-    if val_f1.result()>last_val_f1:
+    if val_f1.result().numpy()>last_val_f1:
       e_f1=epoch+1
       last_val_f1=val_f1.result().numpy()
-    if val_sp.result()>last_val_sp:
+    if val_sp.result().numpy()>last_val_sp:
       e_sp=epoch+1
       last_val_sp=val_sp.result().numpy()
-    if val_se.result()>last_val_se:
+    if val_se.result().numpy()>last_val_se:
       e_se=epoch+1
       last_val_se=val_se.result().numpy()
-    if val_se.result()>last_val_se:
+    if val_se.result().numpy()>last_val_se:
       e_se=epoch+1
       last_val_se=val_se.result().numpy()
-    if val_precision.result()>last_val_prec:
+    if val_precision.result().numpy()>last_val_prec:
       e_prec=epoch+1
       last_val_prec=val_precision.result().numpy()
-    if val_auroc.result()>last_val_auroc:
+    if val_auroc.result().numpy()>last_val_auroc:
       e_auroc=epoch+1
       last_val_auroc=val_auroc.result().numpy()
-  if (val_loss.result()<global_last_val_loss) or (val_acc.result()>global_last_val_acc) or (val_f1.result()>global_last_val_f1) or (val_sp.result()>global_last_val_sp) or (val_se.result()>global_last_val_se) or (val_precision.result()>global_last_val_prec) or (val_auroc.result()>global_last_val_auroc):
+  print("\n")
+  columns = [f"validation metrics at end of epoch {epoch+1}", f"validation values at end of epoch {epoch+1}"];myTab = PrettyTable();
+  myTab.add_column(columns[0], ["val_loss", "val_acc", "val_f1", "val_specificity", "val_sensitivity", "val_precision", "val_auroc"])
+  myTab.add_column(columns[1], [last_val_loss, last_val_acc, last_val_f1, last_val_sp, last_val_se, last_val_prec, last_val_auroc])
+  print(myTab)
+  if (last_val_loss<global_last_val_loss): 
+    global_last_val_loss=last_val_loss
     best_epoch=epoch+1
-    !rm -rf DRIVE/ckpt/
-    checkpoint_path=os.path.join(checkpoint_dir, f'ep-{epoch+1}_va-{val_loss.result()}')
-    ckpt.save(checkpoint_path)
+    !rm DRIVE/ckpt/ -rf
+    checkpoint_path=os.path.join(checkpoint_dir, f'ep-{epoch+1}_va-{val_loss.result()}');ckpt.save(checkpoint_path)
     !rm -rf /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/
     !rm -rf "$last_epoch_number"
     !cp DRIVE/ckpt/ /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/ -R
-    print(f"\nAt least validation metrics improved and new checkpoint will be transferred to drive if the path exists.")
     !touch "$trained_till_epoch"
   else:
-    print(f"\nNone of val_metrics improved in epoch {epoch+1}. The best results acquired was at epoch {best_epoch}.")
+    print(f"\nvalidation loss did not improved. The best validation result occured at epoch {e_loss}.")
+  if (last_val_acc>global_last_val_acc): 
+    global_last_val_acc=last_val_acc
+    best_epoch=epoch+1
+    !rm DRIVE/ckpt/ -rf
+    checkpoint_path=os.path.join(checkpoint_dir, f'ep-{epoch+1}_va-{val_loss.result()}');ckpt.save(checkpoint_path)
+    !rm -rf /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/
     !rm -rf "$last_epoch_number"
+    !cp DRIVE/ckpt/ /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/ -R
     !touch "$trained_till_epoch"
-  print("\n")
-  columns = [f"validation metrics at end of epoch {epoch+1}", f"validation values at end of epoch {epoch+1}"];myTab = PrettyTable();samples_seen_so_far=tstep*BATCH_SIZE;
-  myTab.add_column(columns[0], ["val_loss", "val_acc", "val_f1", "val_specificity", "val_sensitivity", "val_precision", "val_auroc"])
-  myTab.add_column(columns[1], [val_loss.result().numpy(), val_acc.result().numpy(), val_f1.result().numpy(), val_sp.result().numpy(), val_se.result().numpy(), val_precision.result().numpy(), val_auroc.result().numpy()])
-  print(myTab)
+  else:
+    print(f"\nvalidation accuracy did not improved. The best validation accuracy occured at epoch {e_acc}.")
+  if (last_val_f1>global_last_val_f1): 
+    global_last_val_f1=last_val_f1
+    best_epoch=epoch+1
+    !rm DRIVE/ckpt/ -rf
+    checkpoint_path=os.path.join(checkpoint_dir, f'ep-{epoch+1}_va-{val_loss.result()}');ckpt.save(checkpoint_path)
+    !rm -rf /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/
+    !rm -rf "$last_epoch_number"
+    !cp DRIVE/ckpt/ /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/ -R
+    !touch "$trained_till_epoch"
+  else:
+    print(f"\nvalidation f1 did not improved. The best validation f1 occured at epoch {e_f1}.") 
+  if (last_val_sp>global_last_val_sp): 
+    global_last_val_sp=last_val_sp
+    best_epoch=epoch+1
+    !rm DRIVE/ckpt/ -rf
+    checkpoint_path=os.path.join(checkpoint_dir, f'ep-{epoch+1}_va-{val_loss.result()}');ckpt.save(checkpoint_path)
+    !rm -rf /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/
+    !rm -rf "$last_epoch_number"
+    !cp DRIVE/ckpt/ /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/ -R
+    !touch "$trained_till_epoch"
+  else:
+    print(f"\nvalidation sp did not improved. The best validation sp occured at epoch {e_sp}.")
+  if (last_val_se>global_last_val_se): 
+    global_last_val_se=last_val_se 
+    best_epoch=epoch+1
+    !rm DRIVE/ckpt/ -rf
+    checkpoint_path=os.path.join(checkpoint_dir, f'ep-{epoch+1}_va-{val_loss.result()}');ckpt.save(checkpoint_path)
+    !rm -rf /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/
+    !rm -rf "$last_epoch_number"
+    !cp DRIVE/ckpt/ /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/ -R
+    !touch "$trained_till_epoch"
+  else:
+    print(f"\nvalidation se did not improved. The best validation sp occured at epoch {e_se}.")
+  if (last_val_prec>global_last_val_prec): 
+    global_last_val_prec=last_val_prec
+    best_epoch=epoch+1
+    !rm DRIVE/ckpt/ -rf
+    checkpoint_path=os.path.join(checkpoint_dir, f'ep-{epoch+1}_va-{val_loss.result()}');ckpt.save(checkpoint_path)
+    !rm -rf /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/
+    !rm -rf "$last_epoch_number"
+    !cp DRIVE/ckpt/ /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/ -R
+    !touch "$trained_till_epoch"
+  else:
+    print(f"\nvalidation precision did not improved. The best validation precision occured at epoch {e_prec}.")
+  if (last_val_auroc>global_last_val_auroc): 
+    global_last_val_auroc=last_val_auroc
+    best_epoch=epoch+1
+    !rm DRIVE/ckpt/ -rf
+    checkpoint_path=os.path.join(checkpoint_dir, f'ep-{epoch+1}_va-{val_loss.result()}');ckpt.save(checkpoint_path)
+    !rm -rf /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/
+    !rm -rf "$last_epoch_number"
+    !cp DRIVE/ckpt/ /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/ -R
+    !touch "$trained_till_epoch"
+  else:
+    print(f"\nvalidation auroc did not improved. The best validation precision occured at epoch {e_auroc}.")
   end_time_epoch = time.time()
   times = end_time_epoch-start_time_epoch;m, s = divmod(times, 60);h, m = divmod(m, 60)
   print(f"\nThis epoch took ({h}:{m}:{np.round(s)}).\nend of epoch{epoch+1}\n#################################################################################################################")

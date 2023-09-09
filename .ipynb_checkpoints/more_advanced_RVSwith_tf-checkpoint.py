@@ -9,24 +9,8 @@
 !pip install tqdm
 !pip install matplotlib
 !pip install opencv-python
-!pip install tf-nightly
 !pip install scikit-learn
 !pip install datetime
-!pip install onnxruntime
-!pip install -U tf2onnx
-!apt-get install -y -qq software-properties-common python-software-properties module-init-tools
-!add-apt-repository -y ppa:alessandro-strada/ppa 2>&1 > /dev/null
-!apt-get update -qq 2>&1 > /dev/null
-!apt-get -y install -qq google-drive-ocamlfuse fuse
-from google.colab import auth
-#auth.authenticate_user()
-from oauth2client.client import GoogleCredentials
-#creds = GoogleCredentials.get_application_default()
-import getpass
-#!google-drive-ocamlfuse -headless -id={creds.client_id} -secret={creds.client_secret} < /dev/null 2>&1 | grep URL
-#vcode = getpass.getpass()
-#!echo {vcode} | google-drive-ocamlfuse -headless -id={creds.client_id} -secret={creds.client_secret}
-#clearing output in colab
 
 from glob import glob
 from tqdm import tqdm
@@ -45,7 +29,7 @@ import shutil
 from sklearn.utils import shuffle
 import tensorflow as tf
 from tensorflow.keras import backend as K
-from tensorflow.keras.layers import AveragePooling2D,Conv2DTranspose,Input,Add,Conv2D, BatchNormalization,LeakyReLU, Activation, MaxPool2D, Dropout, Flatten, Dense,UpSampling2D,Concatenate,Softmax
+from tensorflow.keras.layers import DepthwiseConv2D, AveragePooling2D,Conv2DTranspose,Input,Add,Conv2D, BatchNormalization,LeakyReLU, Activation, MaxPool2D, Dropout, Flatten, Dense,UpSampling2D,Concatenate,Softmax
 
 %matplotlib inline
 
@@ -697,9 +681,9 @@ e_loss=40;epoch=-1;e_acc=-1;e_f1=-1;e_sp=-1;e_se=-1;e_prec=-1;e_auroc=-1;
 best_epoch=63
 # check here:
 for epoch in range(70, EPOCHS):
+#for epoch in range(EPOCHS):
   trained_till_epoch=f'/content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/trained_till_epoch_{epoch+1}'
   last_epoch_number = f'/content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/trained_till_epoch_{epoch}'
-#for epoch in range(EPOCHS):
   start_time_epoch = time.time()
   total_batches_per_epoch =  ((patch_num*20)//BATCH_SIZE)
   total_sam_till_end_of_epoch=((patch_num*20)//BATCH_SIZE)*BATCH_SIZE
@@ -769,9 +753,7 @@ for epoch in range(70, EPOCHS):
     !rm DRIVE/ckpt/ -rf
     checkpoint_path=os.path.join(checkpoint_dir, f'ep-{epoch+1}_va-{val_loss.result()}');ckpt.save(checkpoint_path)
     !rm -rf /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/
-    !rm -rf "$last_epoch_number"
     !cp DRIVE/ckpt/ /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/ -R
-    !touch "$trained_till_epoch"
   else:
     print(f"\nvalidation loss did not improved. The best validation result occured at epoch {e_loss}.")
   if (last_val_acc>global_last_val_acc): 
@@ -780,9 +762,7 @@ for epoch in range(70, EPOCHS):
     !rm DRIVE/ckpt/ -rf
     checkpoint_path=os.path.join(checkpoint_dir, f'ep-{epoch+1}_va-{val_loss.result()}');ckpt.save(checkpoint_path)
     !rm -rf /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/
-    !rm -rf "$last_epoch_number"
     !cp DRIVE/ckpt/ /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/ -R
-    !touch "$trained_till_epoch"
   else:
     print(f"\nvalidation accuracy did not improved. The best validation accuracy occured at epoch {e_acc}.")
   if (last_val_f1>global_last_val_f1): 
@@ -791,9 +771,7 @@ for epoch in range(70, EPOCHS):
     !rm DRIVE/ckpt/ -rf
     checkpoint_path=os.path.join(checkpoint_dir, f'ep-{epoch+1}_va-{val_loss.result()}');ckpt.save(checkpoint_path)
     !rm -rf /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/
-    !rm -rf "$last_epoch_number"
     !cp DRIVE/ckpt/ /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/ -R
-    !touch "$trained_till_epoch"
   else:
     print(f"\nvalidation f1 did not improved. The best validation f1 occured at epoch {e_f1}.") 
   if (last_val_sp>global_last_val_sp): 
@@ -802,9 +780,7 @@ for epoch in range(70, EPOCHS):
     !rm DRIVE/ckpt/ -rf
     checkpoint_path=os.path.join(checkpoint_dir, f'ep-{epoch+1}_va-{val_loss.result()}');ckpt.save(checkpoint_path)
     !rm -rf /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/
-    !rm -rf "$last_epoch_number"
     !cp DRIVE/ckpt/ /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/ -R
-    !touch "$trained_till_epoch"
   else:
     print(f"\nvalidation sp did not improved. The best validation sp occured at epoch {e_sp}.")
   if (last_val_se>global_last_val_se): 
@@ -813,9 +789,7 @@ for epoch in range(70, EPOCHS):
     !rm DRIVE/ckpt/ -rf
     checkpoint_path=os.path.join(checkpoint_dir, f'ep-{epoch+1}_va-{val_loss.result()}');ckpt.save(checkpoint_path)
     !rm -rf /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/
-    !rm -rf "$last_epoch_number"
     !cp DRIVE/ckpt/ /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/ -R
-    !touch "$trained_till_epoch"
   else:
     print(f"\nvalidation se did not improved. The best validation sp occured at epoch {e_se}.")
   if (last_val_prec>global_last_val_prec): 
@@ -824,9 +798,7 @@ for epoch in range(70, EPOCHS):
     !rm DRIVE/ckpt/ -rf
     checkpoint_path=os.path.join(checkpoint_dir, f'ep-{epoch+1}_va-{val_loss.result()}');ckpt.save(checkpoint_path)
     !rm -rf /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/
-    !rm -rf "$last_epoch_number"
     !cp DRIVE/ckpt/ /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/ -R
-    !touch "$trained_till_epoch"
   else:
     print(f"\nvalidation precision did not improved. The best validation precision occured at epoch {e_prec}.")
   if (last_val_auroc>global_last_val_auroc): 
@@ -835,11 +807,11 @@ for epoch in range(70, EPOCHS):
     !rm DRIVE/ckpt/ -rf
     checkpoint_path=os.path.join(checkpoint_dir, f'ep-{epoch+1}_va-{val_loss.result()}');ckpt.save(checkpoint_path)
     !rm -rf /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/
-    !rm -rf "$last_epoch_number"
     !cp DRIVE/ckpt/ /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/ -R
-    !touch "$trained_till_epoch"
   else:
     print(f"\nvalidation auroc did not improved. The best validation precision occured at epoch {e_auroc}.")
+  !rm -rf "$last_epoch_number"
+  !touch "$trained_till_epoch"
   end_time_epoch = time.time()
   times = end_time_epoch-start_time_epoch;m, s = divmod(times, 60);h, m = divmod(m, 60)
   print(f"\nThis epoch took ({h}:{m}:{np.round(s)}).\nend of epoch{epoch+1}\n#################################################################################################################")

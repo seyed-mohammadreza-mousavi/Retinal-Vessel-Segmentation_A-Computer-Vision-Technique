@@ -29,7 +29,8 @@ import shutil
 from sklearn.utils import shuffle
 import tensorflow as tf
 from tensorflow.keras import backend as K
-from tensorflow.keras.layers import DepthwiseConv2D, AveragePooling2D,Conv2DTranspose,Input,Add,Conv2D, BatchNormalization,LeakyReLU, Activation, MaxPool2D, Dropout, Flatten, Dense,UpSampling2D,Concatenate,Softmax
+from tensorflow.keras.layers import concatenate, MaxPooling2D, DepthwiseConv2D, AveragePooling2D,Conv2DTranspose,Input,Add,Conv2D, BatchNormalization,LeakyReLU, Activation, MaxPool2D, Dropout, Flatten, Dense,UpSampling2D,Concatenate,Softmax, Layer
+from tensorflow.keras.models import Model
 
 %matplotlib inline
 
@@ -669,6 +670,7 @@ clear_output()
 !cp /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/  DRIVE/ckpt/ -R
 ckpt.restore(tf.train.latest_checkpoint(checkpoint_dir))
 print(f"Training starts from here:\n")
+early_stopping = 50
 lr_step=0
 # check here:
 #last_val_loss=global_last_val_loss=2e10
@@ -815,6 +817,8 @@ for epoch in range(70, EPOCHS):
   end_time_epoch = time.time()
   times = end_time_epoch-start_time_epoch;m, s = divmod(times, 60);h, m = divmod(m, 60)
   print(f"\nThis epoch took ({h}:{m}:{np.round(s)}).\nend of epoch{epoch+1}\n#################################################################################################################")
+    if (epoch+1)-best_epoch >= early_stopping:
+        print(f"\n No improvements in metrics for {early_stopping} epochs. Early stopping")
 print(f"\nend of training\n")
   
 '''

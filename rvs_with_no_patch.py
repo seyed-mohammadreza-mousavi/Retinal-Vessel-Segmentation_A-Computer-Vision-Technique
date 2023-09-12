@@ -11,7 +11,8 @@
 !pip install opencv-python
 !pip install scikit-learn
 !pip install datetime
-#clear output
+from IPython.display import clear_output;clear_output()
+
 from IPython.display import clear_output;clear_output()
 from glob import glob
 from tqdm import tqdm
@@ -34,6 +35,7 @@ from tensorflow.keras.layers import concatenate, MaxPooling2D, DepthwiseConv2D, 
 from tensorflow.keras.models import Model
 
 %matplotlib inline
+from IPython.display import clear_output;clear_output()
 
 EPOCHS=200
 VAL_TIME=2
@@ -80,231 +82,147 @@ def restrict_normalized(imgs,mask):
     for i in range(imgs.shape[2]):
         imgs_normalized[:,:,i] = ((imgs_normalized[:,:,i] - np.min(imgs_normalized[:,:,i])) / (np.max(imgs_normalized[:,:,i])-np.min(imgs_normalized[:,:,i])))*255
     return imgs_normalized
-
-# CLAHE (Contrast Limited Adaptive Histogram Equalization)
-#adaptive histogram equalization is used. In this, image is divided into small blocks called "tiles" (tileSize is 8x8 by default in OpenCV). Then each of these blocks are histogram equalized as usual. So in a small area, histogram would confine to a small region (unless there is noise). If noise is there, it will be amplified. To avoid this, contrast limiting is applied. If any histogram bin is above the specified contrast limit (by default 40 in OpenCV), those pixels are clipped and distributed uniformly to other bins before applying histogram equalization. After equalization, to remove artifacts in tile borders, bilinear interpolation is applied
 def clahe_equalized(imgs):
   clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
   imgs_equalized = np.empty(imgs.shape)
   for i in range(imgs.shape[2]):
     imgs_equalized[:,:,i] = clahe.apply(np.array(imgs[:,:,i], dtype = np.uint8))
   return imgs_equalized
-
 def normalized(imgs):
   imgs_normalized =np.empty(imgs.shape)
   for i in range(imgs.shape[2]):
     imgs_normalized[:,:,i] =cv2.equalizeHist(imgs[:,:,i])
   return imgs_normalized
-
 def adjust_gamma(imgs, gamma=1.0):
   invGamma = 1.0 / gamma
   table = np.array([((i / 255.0) ** invGamma) * 255 for i in np.arange(0, 256)]).astype("uint8")
-  # apply gamma correction using the lookup table
   new_imgs = np.empty(imgs.shape)
   for i in range(imgs.shape[2]):
     new_imgs[:,:,i] = cv2.LUT(np.array(imgs[:,:,i], dtype = np.uint8), table)
   return new_imgs
-
 def preprocess(image,mask):
-
   assert np.max(mask)==1
   image=np.array(image)
   image[:,:,0]=image[:,:,0]*mask
   image[:,:,1]=image[:,:,1]*mask
   image[:,:,2]=image[:,:,2]*mask
-
   image=restrict_normalized(image,mask)
   image=clahe_equalized(image)
   image=adjust_gamma(image,1.2)
   image=image/255.0
   return image
-
 def check_coord(x,y,h,w,patch_size):
   if x-patch_size/2>0 and x+patch_size/2<h and y-patch_size/2>0 and y+patch_size/2<w:
     return True
   return False
+def distortion_free_resize(image, img_size):
+    w, h = img_size
+    image = tf.image.resize(image, size=(h, w), preserve_aspect_ratio=True)
+    return image
+	
+!rm -rf DRIVE/training/train_data
+!mkdir DRIVE/training/train_data
+train_data_path = "DRIVE/training/train_data/"
+train_images_preprocessed = []; train_groundtruth = []
+for i in tqdm(range(len(train_image_path_list)), desc="preprocessing the training images: "):
+  train_image = train_image_path_list[i]
+  image_name = train_image.split("/")[-1]
+  image_name_number = image_name.split("_")[0]
+  image_np = plt.imread(train_image)
 
-def image2patch_train(image_path,patch_num,patch_size,training=True,show=True):
-  image_name=image_path.split("/")[-1].split("_")[0]    # 25 for first image
+  train_mask_path = train_mask_dir+image_name_number+"_training_mask.gif"
+  train_mask_path_np = plt.imread(train_mask_path)
+  mask=np.where(train_mask_path_np>0,1,0)
 
-  image=plt.imread(image_path)
+  image = preprocess(image_np, mask)
+  #image = distortion_free_resize(image, (448, 448))
 
-  #groundtruth=plt.imread(train_groundtruth_dir+image_name+"_manual1.gif")
-  groundtruth=plt.imread(train_dir+"1st_manual/"+image_name+"_manual1.gif")
-  groundtruth=np.where(groundtruth>0,1,0)
+  groundtruth_image_path = train_dir+"1st_manual/"+image_name_number+"_manual1.gif"
+  groundtruth_np = plt.imread(groundtruth_image_path)
+  groundtruth=np.where(groundtruth_np>0,255,0)
+  #groundtruth=tf.convert_to_tensor((groundtruth/255.0).astype(np.uint8))
+  #groundtruth = distortion_free_resize(groundtruth, (448, 448))
+  train_images_preprocessed.append(image);train_groundtruth.append(groundtruth)
+for j in range(len(train_images_preprocessed)):
+  train_image = train_image_path_list[j];image_name = train_image.split("/")[-1]
+  image_name_number = image_name.split("_")[0]
+  plt.imsave(train_data_path+image_name_number+"-"+str(j)+"-img.jpg", train_images_preprocessed[j])
+  plt.imsave(train_data_path+image_name_number+"-"+str(j)+"-groundtruth.jpg", train_groundtruth[j])
 
-  mask=plt.imread(train_mask_dir+image_name+"_training_mask.gif")
-  mask=np.where(mask>0,1,0)
+!rm -rf DRIVE/training/valid_data
+!mkdir DRIVE/training/valid_data
+valid_data_path = "DRIVE/training/valid_data/"
+valid_images_preprocessed = []; valid_groundtruth = []
+for i in tqdm(range(len(test_image_path_list)), desc="preprocessing the training images: "):
+  valid_image = test_image_path_list[i]
+  valid_image_name = valid_image.split("/")[-1]
+  valid_image_name_number = valid_image_name.split("_")[0]
+  valid_image_np = plt.imread(valid_image)
 
-  image=preprocess(image,mask)
-  #image_binary=0.8*image[:,:,1]+0.2*image[:,:,2]
+  valid_mask_path = test_mask_dir+valid_image_name_number+"_test_mask.gif"
+  valid_mask_path_np = plt.imread(valid_mask_path)
+  valid_mask=np.where(valid_mask_path_np>0,1,0)
 
-  image_show=image.copy()
-  groundtruth_show=np.zeros_like(image)
-  groundtruth_show[:,:,0]=groundtruth.copy()
-  groundtruth_show[:,:,1]=groundtruth.copy()
-  groundtruth_show[:,:,2]=groundtruth.copy()
+  valid_image = preprocess(valid_image_np, valid_mask)
+  #image = distortion_free_resize(image, (448, 448))
 
-  sample_count=0
-  sample_index=0
+  val_groundtruth_image_path = test_dir+"1st_manual/"+valid_image_name_number+"_manual1.gif"
+  val_groundtruth_np = plt.imread(val_groundtruth_image_path)
+  val_groundtruth=np.where(val_groundtruth_np>0,255,0)
+  #groundtruth=tf.convert_to_tensor((groundtruth/255.0).astype(np.uint8))
+  #groundtruth = distortion_free_resize(groundtruth, (448, 448))
+  valid_images_preprocessed.append(valid_image);valid_groundtruth.append(val_groundtruth)
+for j in range(len(valid_images_preprocessed)):
+  valid_image = test_image_path_list[j];valid_image_name = valid_image.split("/")[-1]
+  valid_image_name_number = valid_image_name.split("_")[0]
+  plt.imsave(valid_data_path+valid_image_name_number+"-"+str(j)+"-img.jpg", valid_images_preprocessed[j])
+  plt.imsave(valid_data_path+valid_image_name_number+"-"+str(j)+"-groundtruth.jpg", valid_groundtruth[j])
+  
+  
+def load_image_groundtruth(img_path,groundtruth_path):
+  img=tf.io.read_file(img_path)
+  img=tf.image.decode_jpeg(img,channels=3)
+  img=tf.image.resize(img,[48,48])
 
-  sample_point=np.where(groundtruth==1)     # generate sample point
+  groundtruth=tf.io.read_file(groundtruth_path)
+  groundtruth=tf.image.decode_jpeg(groundtruth,channels=1)
+  # data argument
+  if random.uniform(0,1)>=0.5:
+    img=tf.image.flip_left_right(img)
+    groundtruth=tf.image.flip_left_right(groundtruth)
+#   if random.uniform(0,1)>=0.5:
+#     seeds=random.uniform(0,1)
+#     img=tf.image.central_crop(img,seeds)
+#     groundtruth=tf.image.central_crop(groundtruth,seeds)
+  img=tf.image.resize(img,[48,48])
+  groundtruth=tf.image.resize(groundtruth,[48,48])
+  img/=255.0
+  groundtruth=(groundtruth+40)/255.0
+  groundtruth=tf.cast(groundtruth,dtype=tf.uint8)
+  return img,groundtruth
+  
+train_data_img_path_list = sorted(glob(train_data_path+"*-*-img.jpg"))
+train_groundtruth_img_path_list = sorted(glob(train_data_path+"*-*-groundtruth.jpg"))
+train_data_img_path_list, train_groundtruth_img_path_list = shuffle(train_data_img_path_list, train_groundtruth_img_path_list, random_state=0)
+print(len(train_data_img_path_list)); print(len(train_groundtruth_img_path_list))
+print(train_data_img_path_list[:2])
+print(train_groundtruth_img_path_list[:2])
 
-  state = np.random.get_state()      # shuffle the coord
-  np.random.shuffle(sample_point[0])
-  np.random.set_state(state)
-  np.random.shuffle(sample_point[1])
+train_dataset=tf.data.Dataset.from_tensor_slices((train_data_img_path_list,train_groundtruth_img_path_list))
+train_dataset=train_dataset.map(load_image_groundtruth,num_parallel_calls=tf.data.experimental.AUTOTUNE)
+train_dataset = train_dataset.shuffle(buffer_size=1300).prefetch(BATCH_SIZE).batch(BATCH_SIZE)
+  
+valid_data_img_path_list = sorted(glob(valid_data_path+"*-*-img.jpg"))
+valid_groundtruth_img_path_list = sorted(glob(valid_data_path+"*-*-groundtruth.jpg"))
+print(len(valid_data_img_path_list)); print(len(valid_groundtruth_img_path_list))
+print(valid_data_img_path_list[:2])
+print(valid_groundtruth_img_path_list[:2])
 
-  patch_image_list=[]
-  patch_groundtruth_list=[]
-
-  while sample_count<patch_num and sample_index<len(sample_point[0]):
-    x,y=sample_point[0][sample_index],sample_point[1][sample_index]
-    if check_coord(x,y,image.shape[0],image.shape[1],patch_size):
-      if np.sum(mask[x-patch_size//2:x+patch_size//2,y-patch_size//2:y+patch_size//2])>patch_threshold:     #select according to the threshold
-
-        patch_image_binary=image[x-patch_size//2:x+patch_size//2,y-patch_size//2:y+patch_size//2,:]   # patch image
-        patch_groundtruth=groundtruth[x-patch_size//2:x+patch_size//2,y-patch_size//2:y+patch_size//2]       # patch mask
-        #patch_image_binary=np.asarray(0.25*patch_image[:,:,2]+0.75*patch_image[:,:,1])         # B*0.25+G*0.75, which enhance the vessel
-        patch_groundtruth=np.where(patch_groundtruth>0,255,0)
-
-        #patch_image_binary =cv2.equalizeHist((patch_image_binary*255.0).astype(np.uint8))/255.0
-
-        patch_image_list.append(patch_image_binary)    # patch image
-        patch_groundtruth_list.append(patch_groundtruth)             # patch mask
-        if show:
-          cv2.rectangle(image_show, (y-patch_size//2,x-patch_size//2,), (y+patch_size//2,x+patch_size//2), (0,1,0), 2)  #draw the illustration
-          cv2.rectangle(groundtruth_show, (y-patch_size//2,x-patch_size//2,), (y+patch_size//2,x+patch_size//2), (0,1,0), 2)
-        sample_count+=1
-
-    if show:                                 # visualize the sample process
-      plt.figure(figsize=(15,15))
-      plt.title("processing: %s"%image_name)
-      plt.subplot(121)
-      plt.imshow(image_show,cmap=plt.cm.gray)   # processd image
-      plt.subplot(122)
-      plt.imshow(groundtruth_show,cmap=plt.cm.gray)  #groundtruth of the image, patch is showed as the green square
-      plt.show()
-      display.clear_output(wait=True)
-    sample_index+=1
-
-  for i in range(len(patch_image_list)):
-    if training==True:
-        plt.imsave(train_patch_dir+image_name+"-"+str(i)+"-img.jpg",patch_image_list[i])
-        #print(patch_mask_list[i])
-        plt.imsave(train_patch_dir+image_name+"-"+str(i)+"-groundtruth.jpg",(patch_groundtruth_list[i]/225.0).astype(np.uint8),cmap = plt.cm.gray)
-    else:
-        plt.imsave(train_patch_dir+image_name+"_"+str(i)+"_val_img.jpg",patch_image_list[i])
-        #print(patch_mask_list[i])
-        plt.imsave(train_patch_dir+image_name+"_"+str(i)+"_val_groundtruth.jpg",(patch_groundtruth_list[i]/225.0).astype(np.uint8),cmap = plt.cm.gray)
-
-# delete original patch images
-if not os.path.exists(train_patch_dir):
-  os.mkdir(train_patch_dir)
-else:
-  shutil.rmtree(train_patch_dir)
-  os.mkdir(train_patch_dir)
-
-if not os.path.exists(test_save_dir):
-  os.mkdir(test_save_dir)
-
-# generate train patch images
-for i in tqdm(range(len(train_image_path_list)),desc="Generate the training patches: "):
-  image2patch_train(train_image_path_list[i],patch_num,patch_size,training=True,show=False)  # set show=True to visualize the sample process, which is much slower than show=False
-
-def image2patch_validation(image_path,patch_num,patch_size,training=True,show=True):
-  image_name=image_path.split("/")[-1].split("_")[0]
-
-  image=plt.imread(image_path)
-
-  #groundtruth=plt.imread(train_groundtruth_dir+image_name+"_manual1.gif")
-  groundtruth=plt.imread(test_dir+"1st_manual/"+image_name+"_manual1.gif")
-  groundtruth=np.where(groundtruth>0,1,0)
-
-  #mask=plt.imread(train_mask_dir+image_name+"_training_mask.gif")
-  mask=plt.imread(test_mask_dir+image_name+"_test_mask.gif")
-  mask=np.where(mask>0,1,0)
-
-  image=preprocess(image,mask)
-  #image_binary=0.8*image[:,:,1]+0.2*image[:,:,2]
-
-  image_show=image.copy()
-  groundtruth_show=np.zeros_like(image)
-  groundtruth_show[:,:,0]=groundtruth.copy()
-  groundtruth_show[:,:,1]=groundtruth.copy()
-  groundtruth_show[:,:,2]=groundtruth.copy()
-
-  sample_count=0
-  sample_index=0
-
-  sample_point=np.where(groundtruth==1)     # generate sample point
-
-  state = np.random.get_state()      # shuffle the coord
-  np.random.shuffle(sample_point[0])
-  np.random.set_state(state)
-  np.random.shuffle(sample_point[1])
-
-  patch_image_list=[]
-  patch_groundtruth_list=[]
-
-  while sample_count<patch_num and sample_index<len(sample_point[0]):
-    x,y=sample_point[0][sample_index],sample_point[1][sample_index]
-    if check_coord(x,y,image.shape[0],image.shape[1],patch_size):
-      if np.sum(mask[x-patch_size//2:x+patch_size//2,y-patch_size//2:y+patch_size//2])>patch_threshold:     #select according to the threshold
-
-        patch_image_binary=image[x-patch_size//2:x+patch_size//2,y-patch_size//2:y+patch_size//2,:]   # patch image
-        patch_groundtruth=groundtruth[x-patch_size//2:x+patch_size//2,y-patch_size//2:y+patch_size//2]       # patch mask
-        #patch_image_binary=np.asarray(0.25*patch_image[:,:,2]+0.75*patch_image[:,:,1])         # B*0.25+G*0.75, which enhance the vessel
-        patch_groundtruth=np.where(patch_groundtruth>0,255,0)
-
-        #patch_image_binary =cv2.equalizeHist((patch_image_binary*255.0).astype(np.uint8))/255.0
-
-        patch_image_list.append(patch_image_binary)    # patch image
-        patch_groundtruth_list.append(patch_groundtruth)             # patch mask
-        if show:
-          cv2.rectangle(image_show, (y-patch_size//2,x-patch_size//2,), (y+patch_size//2,x+patch_size//2), (0,1,0), 2)  #draw the illustration
-          cv2.rectangle(groundtruth_show, (y-patch_size//2,x-patch_size//2,), (y+patch_size//2,x+patch_size//2), (0,1,0), 2)
-        sample_count+=1
-
-    if show:                                 # visualize the sample process
-      plt.figure(figsize=(15,15))
-      plt.title("processing: %s"%image_name)
-      plt.subplot(121)
-      plt.imshow(image_show,cmap=plt.cm.gray)   # processd image
-      plt.subplot(122)
-      plt.imshow(groundtruth_show,cmap=plt.cm.gray)  #groundtruth of the image, patch is showed as the green square
-      plt.show()
-      display.clear_output(wait=True)
-    sample_index+=1
-
-  for i in range(len(patch_image_list)):
-    if training==True:
-        plt.imsave(test_patch_dir+image_name+"-"+str(i)+"-img.jpg",patch_image_list[i])
-        #print(patch_mask_list[i])
-        plt.imsave(test_patch_dir+image_name+"-"+str(i)+"-groundtruth.jpg",(patch_groundtruth_list[i]/225.0).astype(np.uint8),cmap = plt.cm.gray)
-    else:
-        plt.imsave(test_patch_dir+image_name+"_"+str(i)+"_val_img.jpg",patch_image_list[i])
-        #print(patch_mask_list[i])
-        plt.imsave(test_patch_dir+image_name+"_"+str(i)+"_val_groundtruth.jpg",(patch_groundtruth_list[i]/225.0).astype(np.uint8),cmap = plt.cm.gray)
-
-# delete original patch images
-if not os.path.exists(test_patch_dir):
-  os.mkdir(test_patch_dir)
-else:
-  shutil.rmtree(test_patch_dir)
-  os.mkdir(test_patch_dir)
-
-if not os.path.exists(test_save_dir):
-  os.mkdir(test_save_dir)
-
-# generate validation patch images
-
-for i in tqdm(range(len(val_image_path_list)),desc="Generate the val patches: "):
-  image2patch_validation(val_image_path_list[i],patch_num,patch_size,training=False,show=False)
-
+val_dataset=tf.data.Dataset.from_tensor_slices((valid_data_img_path_list,valid_groundtruth_img_path_list))
+val_dataset=val_dataset.map(load_image_groundtruth,num_parallel_calls=tf.data.experimental.AUTOTUNE)
+val_dataset = val_dataset.shuffle(buffer_size=1300).prefetch(BATCH_SIZE).batch(BATCH_SIZE)
 
 # define the model under eager mode
-
 class LinearTransform(tf.keras.Model):
   def __init__(self, name="LinearTransform"):
     super(LinearTransform, self).__init__(self,name=name)
@@ -378,7 +296,8 @@ class ResBlock(tf.keras.Model):
 class Unet(tf.keras.Model):
   def __init__(self):
     super(Unet,self).__init__(self)
-    self.conv_init=LinearTransform()
+    #self.conv_init=LinearTransform()
+    self.conv_init=Conv2D(1,kernel_size=3,strides=1,padding='same',use_bias=False)
     self.resinit=ResBlock(16,residual_path=True)
     self.up_sample=UpSampling2D(size=(2,2),interpolation='bilinear')
     self.resup=ResBlock(32,residual_path=True)
@@ -421,7 +340,8 @@ class Unet(tf.keras.Model):
     self.act=Activation('sigmoid')
 
   def call(self,x,training=True):
-    x_linear=self.conv_init(x,training=training)
+    #x_linear=self.conv_init(x,training=training)
+    x_linear=self.conv_init(x, training=training)
     x=self.resinit(x_linear,training=training)
     x=self.up_sample(x)
     x=self.resup(x,training=training)
@@ -461,44 +381,13 @@ class Unet(tf.keras.Model):
     seg_result=self.act(self.bn_final(self.conv_final(x),training=training))
 
     return x_linear,seg_result
-    
+
+
 checkpoint_dir=dataset_path+"ckpt/"
 #log_path=dataset_path+"logs/"
 
 if not os.path.exists(checkpoint_dir):
   os.mkdir(checkpoint_dir)
-#if not os.path.exists('ckpt'):
-#  os.mkdir('ckpt')
-
-#if not os.path.exists(log_path):
-#  os.mkdir(log_path)
-
-def load_image_groundtruth(img_path,groundtruth_path):
-  img=tf.io.read_file(img_path)
-  img=tf.image.decode_jpeg(img,channels=3)
-  img=tf.image.resize(img,[patch_size,patch_size])
-
-  groundtruth=tf.io.read_file(groundtruth_path)
-  groundtruth=tf.image.decode_jpeg(groundtruth,channels=1)
-
-  # data argument
-  if random.uniform(0,1)>=0.5:
-    img=tf.image.flip_left_right(img)
-    groundtruth=tf.image.flip_left_right(groundtruth)
-
-#   if random.uniform(0,1)>=0.5:
-#     seeds=random.uniform(0,1)
-#     img=tf.image.central_crop(img,seeds)
-#     groundtruth=tf.image.central_crop(groundtruth,seeds)
-
-  img=tf.image.resize(img,[patch_size,patch_size])
-  groundtruth=tf.image.resize(groundtruth,[patch_size,patch_size])
-
-  img/=255.0
-  groundtruth=(groundtruth+40)/255.0
-  groundtruth=tf.cast(groundtruth,dtype=tf.uint8)
-
-  return img,groundtruth
 
 def dice(y_true,y_pred,smooth=1.):
   y_true=tf.cast(y_true,dtype=tf.float32)
@@ -556,33 +445,9 @@ def focal_loss(y_true, y_pred, alpha=alpha, gamma=gamma):
     focalloss = -tf.reduce_sum(alpha * tf.pow(1 - pt, gamma) * tf.math.log(pt))
     return focalloss
 
-train_patch_img_path_list=sorted(glob(train_patch_dir+"*-*-img.jpg"))
-train_patch_groundtruth_path_list=sorted(glob(train_patch_dir+"*-*-groundtruth.jpg"))
-train_patch_img_path_list,train_patch_groundtruth_path_list=shuffle(train_patch_img_path_list,train_patch_groundtruth_path_list,random_state=0)
-
-
-# make sure that img-list and mask-list is in order
-print(len(train_patch_img_path_list),len(train_patch_groundtruth_path_list))
-print(train_patch_img_path_list[:2])
-print(train_patch_groundtruth_path_list[:2])
-
-val_patch_img_path_list=sorted(glob(test_patch_dir+"*_*_val_img.jpg"))
-val_patch_groundtruth_path_list=sorted(glob(test_patch_dir+"*_*_val_groundtruth.jpg"))
-
-print(val_patch_img_path_list[:2])
-print(val_patch_groundtruth_path_list[:2])
-
-# Training Dataloader
-train_dataset=tf.data.Dataset.from_tensor_slices((train_patch_img_path_list,train_patch_groundtruth_path_list))
-train_dataset=train_dataset.map(load_image_groundtruth,num_parallel_calls=tf.data.experimental.AUTOTUNE)
-train_dataset = train_dataset.shuffle(buffer_size=1300).prefetch(BATCH_SIZE).batch(BATCH_SIZE)
-
-# VAL Dataloader
-val_dataset=tf.data.Dataset.from_tensor_slices((val_patch_img_path_list,val_patch_groundtruth_path_list))
-val_dataset=val_dataset.map(load_image_groundtruth,num_parallel_calls=tf.data.experimental.AUTOTUNE)
-val_dataset =val_dataset.shuffle(buffer_size=1300).prefetch(BATCH_SIZE).batch(BATCH_SIZE)
 
 model=Unet()
+
 
 # Learning rate and optimizer
 cosine_decay = tf.keras.experimental.CosineDecayRestarts(initial_learning_rate=LR, first_decay_steps=12000,t_mul=1000,m_mul=0.5,alpha=1e-5)
@@ -662,26 +527,28 @@ def val_step(step,patch,groundtruth):
   #tf.summary.image("groundtruth",groundtruth*255,step=step)
   #tf.summary.image("pred",pred_seg,step=step)
   #log_writer.flush()
+  
 
+BATCH_SIZE=2
 # check here:
-!rm DRIVE/ckpt/ -rf
-!cp /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/  DRIVE/ckpt/ -R
+#!rm DRIVE/ckpt/ -rf
+#!cp /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/  DRIVE/ckpt/ -R
 ckpt.restore(tf.train.latest_checkpoint(checkpoint_dir))
 print(f"Training starts from here:\n")
 early_stopping = 50
 lr_step=0
 # check here:
-#last_val_loss=global_last_val_loss=2e10
-global_last_val_loss=last_val_loss=0.4837116777896881
+last_val_loss=global_last_val_loss=2e10
+#global_last_val_loss=last_val_loss=0.4837116777896881
 last_val_acc=global_last_val_acc=last_val_f1=global_last_val_f1=last_val_sp=global_last_val_sp=last_val_se=global_last_val_se=last_val_prec=global_last_val_prec=last_val_auroc=global_last_val_auroc=0
 
 # check here:
-#e_loss=epoch=e_acc=e_f1=e_sp=e_se=e_prec=e_auroc=-1
-e_loss=40;epoch=-1;e_acc=-1;e_f1=-1;e_sp=-1;e_se=-1;e_prec=-1;e_auroc=-1;
-best_epoch=63
+e_loss=epoch=e_acc=e_f1=e_sp=e_se=e_prec=e_auroc=-1
+#e_loss=40;epoch=-1;e_acc=-1;e_f1=-1;e_sp=-1;e_se=-1;e_prec=-1;e_auroc=-1;
+best_epoch=0
 # check here:
-for epoch in range(70, EPOCHS):
-#for epoch in range(EPOCHS):
+#for epoch in range(70, EPOCHS):
+for epoch in range(EPOCHS):
   trained_till_epoch=f'/content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/trained_till_epoch_{epoch+1}'
   last_epoch_number = f'/content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/trained_till_epoch_{epoch}'
   start_time_epoch = time.time()
@@ -815,92 +682,6 @@ for epoch in range(70, EPOCHS):
   end_time_epoch = time.time()
   times = end_time_epoch-start_time_epoch;m, s = divmod(times, 60);h, m = divmod(m, 60)
   print(f"\nThis epoch took ({h}:{m}:{np.round(s)}).\nend of epoch{epoch+1}\n#################################################################################################################")
-    if (epoch+1)-best_epoch >= early_stopping:
-        print(f"\n No improvements in metrics for {early_stopping} epochs. Early stopping")
+  if (epoch+1)-best_epoch >= early_stopping:
+    print(f"\n No improvements in metrics for {early_stopping} epochs. Early stopping")
 print(f"\nend of training\n")
-  
-'''
-lr_step=0
-last_val_loss=2e10
-with log_writer.as_default():
-  for epoch in range(EPOCHS):
-    # renew the recorder
-    train_loss.reset_states()
-    train_acc.reset_states()
-    val_loss.reset_states()
-    val_acc.reset_states()
-    train_f1.reset_states();val_f1.reset_states()
-    train_sp.reset_states();val_sp.reset_states()
-    train_se.reset_states();val_se.reset_states()
-    train_precision.reset_states();val_precision.reset_states()
-    train_auroc.reset_states();val_auroc.reset_states()
-
-    # training
-    for tstep, (patch,groundtruth) in enumerate(train_dataset):
-      train_step(lr_step,patch,groundtruth)
-
-      #tf.summary.scalar("learning_rate", optimizer._decayed_lr(tf.float32).numpy(), step=lr_step)
-      tf.summary.scalar("learning_rate", optimizer.lr.numpy(), step=lr_step)
-      print('\repoch {}/{:.4f}, batch {}/{:.4f} ==> train_loss:{:.4f}, train_acc:{:.4f}, train_f1:{:.4f}, train_sp:{:.4f}, train_se:{:.4f}, train_precision:{:.4f}, train_auroc:{:.4f}'.format(epoch + 1, EPOCHS, tstep, np.ceil(len(train_patch_img_path_list)/BATCH_SIZE)-1, train_loss.result(), train_acc.result(), train_f1.result(), train_sp.result(), train_se.result(), train_precision.result(), train_auroc.result()),end="")
-      lr_step+=1
-
-    if (epoch + 1) % VAL_TIME == 0:
-      #valid
-      for vstep, (patch,groundtruth) in enumerate(val_dataset):
-
-        val_step(lr_step,patch,groundtruth)
-
-      print('\repoch {}/{:.4f}, batch {}/{:.4f} ==> val_loss:{:.4f}, val_acc:{:.4f}, val_f1:{:.4f}, val_sp:{:.4f}, val_se:{:.4f}, val_precision:{:.4f}, val_auroc:{:.4f}'.format(epoch + 1, EPOCHS, vstep, np.ceil(len(train_patch_img_path_list)/BATCH_SIZE)-1, val_loss.result(), val_acc.result(), val_f1.result(), val_sp.result(), val_se.result(), val_precision.result(), val_auroc.result()),end="")
-      tf.summary.scalar("val_loss", val_loss.result(), step=epoch)
-      tf.summary.scalar("val_acc", val_acc.result(), step=epoch)
-
-      if val_loss.result()<last_val_loss:
-        ckpt.save(checkpoint_path)
-        last_val_loss=val_loss.result()
-        !cp DRIVE/ckpt drive/MyDrive/Colab/vision_ds/ -Rf
-    print("")
-    tf.summary.scalar("train_loss", train_loss.result(), step=epoch)
-    tf.summary.scalar("train_acc", train_acc.result(), step=epoch)
-    log_writer.flush()
-
-# for training from last saved checkpoint
-'''
-'''
-!cp drive/MyDrive/Colab/vision_ds/ckpt DRIVE/ -R
-ckpt.restore(tf.train.latest_checkpoint(checkpoint_path))
-start_epoch = optimizer.iterations.numpy() // (len(train_patch_img_path_list)/BATCH_SIZE) + 1
-from tensorflow.python.ops.batch_ops import batch
-lr_step=0
-last_val_loss=2e10
-with log_writer.as_default():
-  for epoch in range(int(start_epoch), EPOCHS):
-    # renew the recorder
-    train_loss.reset_states();train_acc.reset_states();val_loss.reset_states()
-    val_acc.reset_states();train_f1.reset_states();val_f1.reset_states()
-    train_sp.reset_states();val_sp.reset_states();train_se.reset_states()
-    val_se.reset_states();train_precision.reset_states();val_precision.reset_states()
-    train_auroc.reset_states();val_auroc.reset_states()
-    # training
-    for tstep, (patch,groundtruth) in enumerate(train_dataset):
-      train_step(lr_step,patch,groundtruth)
-      #tf.summary.scalar("learning_rate", optimizer._decayed_lr(tf.float32).numpy(), step=lr_step)
-      tf.summary.scalar("learning_rate", optimizer.lr.numpy(), step=lr_step)
-      print('\repoch {}/{:.4f}, batch {}/{:.4f} ==> train_loss:{:.4f}, train_acc:{:.4f}, train_f1:{:.4f}, train_sp:{:.4f}, train_se:{:.4f}, train_precision:{:.4f}, train_auroc:{:.4f}'.format(epoch + 1, EPOCHS, tstep, np.ceil(len(train_patch_img_path_list)/BATCH_SIZE)-1, train_loss.result(), train_acc.result(), train_f1.result(), train_sp.result(), train_se.result(), train_precision.result(), train_auroc.result()),end="")
-      lr_step+=1
-    if (epoch + 1) % 2 == 0:
-      #valid
-      for vstep, (patch,groundtruth) in enumerate(val_dataset):
-        val_step(lr_step,patch,groundtruth)
-      print('\repoch {}/{:.4f}, batch {}/{:.4f} ==> val_loss:{:.4f}, val_acc:{:.4f}, val_f1:{:.4f}, val_sp:{:.4f}, val_se:{:.4f}, val_precision:{:.4f}, val_auroc:{:.4f}'.format(epoch + 1, EPOCHS, vstep, np.ceil(len(train_patch_img_path_list)/BATCH_SIZE)-1, val_loss.result(), val_acc.result(), val_f1.result(), val_sp.result(), val_se.result(), val_precision.result(), val_auroc.result()),end="")
-      tf.summary.scalar("val_loss", val_loss.result(), step=epoch)
-      tf.summary.scalar("val_acc", val_acc.result(), step=epoch)
-      if val_loss.result()<last_val_loss:
-        ckpt.save(checkpoint_path)
-        last_val_loss=val_loss.result()
-        !cp DRIVE/ckpt drive/MyDrive/Colab/vision_ds/ -Rf
-        print(f"\nnew checkpoint saved")
-    print("")
-    tf.summary.scalar("train_loss", train_loss.result(), step=epoch)
-    tf.summary.scalar("train_acc", train_acc.result(), step=epoch)
-    log_writer.flush()
-'''

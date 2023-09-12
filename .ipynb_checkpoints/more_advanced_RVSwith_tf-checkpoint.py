@@ -11,7 +11,8 @@
 !pip install opencv-python
 !pip install scikit-learn
 !pip install datetime
-
+#clear output
+from IPython.display import clear_output;clear_output()
 from glob import glob
 from tqdm import tqdm
 from prettytable import PrettyTable
@@ -124,7 +125,7 @@ def check_coord(x,y,h,w,patch_size):
   return False
 
 def image2patch_train(image_path,patch_num,patch_size,training=True,show=True):
-  image_name=image_path.split("/")[-1].split("_")[0]
+  image_name=image_path.split("/")[-1].split("_")[0]    # 25 for first image
 
   image=plt.imread(image_path)
 
@@ -661,9 +662,6 @@ def val_step(step,patch,groundtruth):
   #tf.summary.image("groundtruth",groundtruth*255,step=step)
   #tf.summary.image("pred",pred_seg,step=step)
   #log_writer.flush()
-
-from IPython.display import clear_output
-clear_output()
 
 # check here:
 !rm DRIVE/ckpt/ -rf

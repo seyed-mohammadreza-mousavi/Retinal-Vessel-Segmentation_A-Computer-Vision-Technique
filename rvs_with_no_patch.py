@@ -40,11 +40,11 @@ from tensorflow.keras.models import Model
 from IPython.display import clear_output;clear_output()
 
 EPOCHS=200
-LR=0.0003
-BATCH_SIZE=64
+LR=0.0001
+BATCH_SIZE=10
 
-num_augmentations_per_image_for_train = 1  # Specify the number of augmentations per image
-num_augmentations_per_image_valid = 1
+num_augmentations_per_image_for_train = 350  # Specify the number of augmentations per image
+num_augmentations_per_image_valid = 150
 
 patch_size=48        # patch image size
 patch_num=1500        # sample number of one training image
@@ -509,7 +509,6 @@ def val_step(step,patch,groundtruth):
   #tf.summary.image("pred",pred_seg,step=step)
   #log_writer.flush()
 
-BATCH_SIZE=2
 # check here:
 #!rm DRIVE/ckpt/ -rf
 #!cp /content/drive/MyDrive/Colab/vision_ds/crossentropy_checkpoint/  DRIVE/ckpt/ -R
@@ -526,6 +525,7 @@ last_val_acc=global_last_val_acc=last_val_f1=global_last_val_f1=last_val_sp=glob
 e_loss=epoch=e_acc=e_f1=e_sp=e_se=e_prec=e_auroc=-1
 #e_loss=40;epoch=-1;e_acc=-1;e_f1=-1;e_sp=-1;e_se=-1;e_prec=-1;e_auroc=-1;
 best_epoch=0
+cumulative_times=0.0
 # check here:
 #for epoch in range(70, EPOCHS):
 for epoch in range(EPOCHS):
@@ -660,8 +660,11 @@ for epoch in range(EPOCHS):
   !rm -rf "$last_epoch_number"
   !touch "$trained_till_epoch"
   end_time_epoch = time.time()
-  times = end_time_epoch-start_time_epoch;m, s = divmod(times, 60);h, m = divmod(m, 60)
-  print(f"\nThis epoch took ({h}:{m}:{np.round(s)}).\nend of epoch{epoch+1}\n#################################################################################################################")
+  times = end_time_epoch-start_time_epoch
+  cumulative_times = cumulative_times + times
+  m, s = divmod(cumulative_times, 60)
+  h, m = divmod(m, 60)
+  print(f"\nTill here it took ({h}:{m}:{np.round(s)}).\nend of epoch{epoch+1}\n#################################################################################################################")
   if (epoch+1)-best_epoch >= early_stopping:
     print(f"\n No improvements in metrics for {early_stopping} epochs. Early stopping")
 print(f"\nend of training\n")

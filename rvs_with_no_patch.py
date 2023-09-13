@@ -1,10 +1,10 @@
-!apt-get -qq install git
-!git config --global user.email "mohammadreza92299@gmail.com"
-!git config --global user.name "Seyed-Mohammadreza-Mousavi"
+#!apt-get -qq install git
+#!git config --global user.email "mohammadreza92299@gmail.com"
+#!git config --global user.name "Seyed-Mohammadreza-Mousavi"
 #!cp drive/MyDrive/Colab/vision_ds/DRIVE ./ -R
 !git clone https://github.com/seyed-mohammadreza-mousavi/Retinal-Vessel-Segmentation_A-Computer-Vision-Technique.git
 %cd Retinal-Vessel-Segmentation_A-Computer-Vision-Technique/
-!git remote set-url origin https://aAmohammadrezaaA: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@github.com/aAmohammadrezaaA/Retinal-Vessel-Segmentation_A-Computer-Vision-Technique.git
+#!git remote set-url origin https://aAmohammadrezaaA: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@github.com/aAmohammadrezaaA/Retinal-Vessel-Segmentation_A-Computer-Vision-Technique.git
 #!ls
 !pip install tqdm
 !pip install matplotlib
@@ -22,6 +22,8 @@ from IPython import display
 import numpy as np
 import tabulate
 from tabulate import tabulate
+import keras
+from keras import layers
 import cv2
 import os
 import datetime
@@ -38,9 +40,11 @@ from tensorflow.keras.models import Model
 from IPython.display import clear_output;clear_output()
 
 EPOCHS=200
-VAL_TIME=2
 LR=0.0003
 BATCH_SIZE=64
+
+num_augmentations_per_image_for_train = 1  # Specify the number of augmentations per image
+num_augmentations_per_image_valid = 1
 
 patch_size=48        # patch image size
 patch_num=1500        # sample number of one training image
@@ -55,9 +59,6 @@ test_dir=dataset_path+"test/"
 train_image_dir=train_dir+"images/"
 train_mask_dir=train_dir+"mask/"
 train_groundtruth_dir=train_dir+"1st_manual/"
-train_patch_dir=train_dir+"patch/"
-test_patch_dir=test_dir+"patch/"
-
 test_image_dir=test_dir+"images/"
 test_mask_dir=test_dir+"mask/"
 test_groundtruth_dir=test_dir+"groundtruth/"
@@ -117,11 +118,9 @@ def check_coord(x,y,h,w,patch_size):
   return False
 def distortion_free_resize(image, img_size):
     w, h = img_size
-    image = tf.image.resize(image, size=(h, w), preserve_aspect_ratio=True)
+    image = tf.image.resize(image, size=(h, w), preserve_aspect_ratio=False)
     return image
-	
-!rm -rf DRIVE/training/train_data
-!mkdir DRIVE/training/train_data
+
 train_data_path = "DRIVE/training/train_data/"
 train_images_preprocessed = []; train_groundtruth = []
 for i in tqdm(range(len(train_image_path_list)), desc="preprocessing the training images: "):
@@ -143,17 +142,9 @@ for i in tqdm(range(len(train_image_path_list)), desc="preprocessing the trainin
   #groundtruth=tf.convert_to_tensor((groundtruth/255.0).astype(np.uint8))
   #groundtruth = distortion_free_resize(groundtruth, (448, 448))
   train_images_preprocessed.append(image);train_groundtruth.append(groundtruth)
-for j in range(len(train_images_preprocessed)):
-  train_image = train_image_path_list[j];image_name = train_image.split("/")[-1]
-  image_name_number = image_name.split("_")[0]
-  plt.imsave(train_data_path+image_name_number+"-"+str(j)+"-img.jpg", train_images_preprocessed[j])
-  plt.imsave(train_data_path+image_name_number+"-"+str(j)+"-groundtruth.jpg", train_groundtruth[j])
-
-!rm -rf DRIVE/training/valid_data
-!mkdir DRIVE/training/valid_data
 valid_data_path = "DRIVE/training/valid_data/"
 valid_images_preprocessed = []; valid_groundtruth = []
-for i in tqdm(range(len(test_image_path_list)), desc="preprocessing the training images: "):
+for i in tqdm(range(len(test_image_path_list)), desc="preprocessing the validation/test images: "):
   valid_image = test_image_path_list[i]
   valid_image_name = valid_image.split("/")[-1]
   valid_image_name_number = valid_image_name.split("_")[0]
@@ -172,13 +163,7 @@ for i in tqdm(range(len(test_image_path_list)), desc="preprocessing the training
   #groundtruth=tf.convert_to_tensor((groundtruth/255.0).astype(np.uint8))
   #groundtruth = distortion_free_resize(groundtruth, (448, 448))
   valid_images_preprocessed.append(valid_image);valid_groundtruth.append(val_groundtruth)
-for j in range(len(valid_images_preprocessed)):
-  valid_image = test_image_path_list[j];valid_image_name = valid_image.split("/")[-1]
-  valid_image_name_number = valid_image_name.split("_")[0]
-  plt.imsave(valid_data_path+valid_image_name_number+"-"+str(j)+"-img.jpg", valid_images_preprocessed[j])
-  plt.imsave(valid_data_path+valid_image_name_number+"-"+str(j)+"-groundtruth.jpg", valid_groundtruth[j])
-  
-  
+
 def load_image_groundtruth(img_path,groundtruth_path):
   img=tf.io.read_file(img_path)
   img=tf.image.decode_jpeg(img,channels=3)
@@ -200,188 +185,186 @@ def load_image_groundtruth(img_path,groundtruth_path):
   groundtruth=(groundtruth+40)/255.0
   groundtruth=tf.cast(groundtruth,dtype=tf.uint8)
   return img,groundtruth
-  
+
+num_images = len(train_images_preprocessed)
+
+def custom_data_generator(image, groundtruth):
+    # Define augmentation layers
+    augmentation_layers = keras.Sequential(
+        [
+            layers.RandomRotation(factor=0.15),  # Rotation within -45 to +45 degrees
+            layers.RandomTranslation(height_factor=0.1, width_factor=0.1),  # Random translation
+            layers.RandomFlip(),  # Random horizontal flip
+        ],
+        name="img_augmentation",
+    )
+    image = tf.cast(image, tf.float64)
+    groundtruth = tf.cast(tf.expand_dims(groundtruth, 3), tf.float64)
+    input_tensor = tf.concat([image, groundtruth], axis=3)
+
+    # Apply the same augmentation to both the image and groundtruth
+    augmented_tensor = augmentation_layers(input_tensor)
+
+    augmented_image = augmented_tensor[:, :, :, :3]
+    augmented_groundtruth = augmented_tensor[:, :, :, 3:]
+
+    return augmented_image, augmented_groundtruth
+
+t_img_lbl_pair=list(zip(train_images_preprocessed, train_groundtruth))
+
+print(f"Augmenting process takes a little time. Be patient\n")
+# Create a list to store augmented images
+t_augmented_pairs = []
+# Apply augmentations to each image in the dataset
+for i, j in tqdm(t_img_lbl_pair, "Augmenting training_data "):
+    t_augmented_pairs.append((i, j))
+    for _ in range(num_augmentations_per_image_for_train):
+        image = tf.expand_dims(i, axis=0)
+        g = tf.expand_dims(j, axis=0)
+        augmented_image, augmented_groundtruth = custom_data_generator(image, g)
+        #image = tf.expand_dims(i, axis=0)
+        #g = tf.expand_dims(j, axis=0)
+        #augmented_image=img_augmentation(image)
+        #augmented_groundtruth=img_augmentation(g)
+        t_augmented_pairs.append((augmented_image[0],augmented_groundtruth[0]))
+
+v_img_lbl_pair=list(zip(valid_images_preprocessed, valid_groundtruth))
+v_augmented_pairs = []
+# num_augmentations_per_image_valid = 2
+# Apply augmentations to each image in the dataset
+for i, j in tqdm(v_img_lbl_pair, "Augmenting validation_data "):
+    v_augmented_pairs.append((i, j))
+    for _ in range(num_augmentations_per_image_valid):
+        image = tf.expand_dims(i, axis=0)
+        g = tf.expand_dims(j, axis=0)
+        augmented_image, augmented_groundtruth = custom_data_generator(image, g)
+        #image = tf.expand_dims(i, axis=0)
+        #g = tf.expand_dims(j, axis=0)
+        #augmented_image=img_augmentation(image)
+        #augmented_groundtruth=img_augmentation(g)
+        v_augmented_pairs.append((augmented_image[0],augmented_groundtruth[0]))
+
+duplicate_train_image_path_list=[path for path in train_image_path_list for _ in range(num_augmentations_per_image_for_train+1)]
+duplicate_test_image_path_list=[path for path in test_image_path_list for _ in range(num_augmentations_per_image_valid+1)]
+
+t_img = []
+t_g = []
+for i, j in t_augmented_pairs:
+  t_img.append(i)
+  t_g.append(j[:, :])
+!rm -rf DRIVE/training/train_data
+!mkdir DRIVE/training/train_data
+for j in tqdm(range(len(t_img)), "saving augmented train images: "):
+  train_image = duplicate_train_image_path_list[j];image_name = train_image.split("/")[-1]
+  image_name_number = image_name.split("_")[0]
+  if isinstance(t_img[j], np.ndarray):
+    plt.imsave(train_data_path+image_name_number+"-"+str(j)+"-img.jpg", t_img[j])
+    plt.imsave(train_data_path+image_name_number+"-"+str(j)+"-groundtruth.jpg", t_g[j])
+  else:
+    t_img=t_img[j].numpy()
+    plt.imsave(train_data_path+image_name_number+"-"+str(j)+"-img.jpg", t_img[j])
+    t_g=t_g[j].numpy()
+    plt.imsave(train_data_path+image_name_number+"-"+str(j)+"-groundtruth.jpg", t_g[j])
+v_img = []
+v_g = []
+for i, j in v_augmented_pairs:
+  v_img.append(i)
+  v_g.append(j[:, :])
+!rm -rf DRIVE/training/valid_data
+!mkdir DRIVE/training/valid_data
+for j in tqdm(range(len(v_img)), "saving augmented validation/test images: "):
+  test_image = duplicate_test_image_path_list[j];image_name = test_image.split("/")[-1]
+  image_name_number = image_name.split("_")[0]
+  if isinstance(v_img[j], np.ndarray):
+    plt.imsave(valid_data_path+image_name_number+"-"+str(j)+"-img.jpg", v_img[j])
+    plt.imsave(valid_data_path+image_name_number+"-"+str(j)+"-groundtruth.jpg", v_g[j])
+  else:
+    v_img=v_img[j].numpy()
+    plt.imsave(valid_data_path+image_name_number+"-"+str(j)+"-img.jpg", v_img[j])
+    v_g=v_g[j].numpy()
+    plt.imsave(valid_data_path+image_name_number+"-"+str(j)+"-groundtruth.jpg", v_g[j])
+
 train_data_img_path_list = sorted(glob(train_data_path+"*-*-img.jpg"))
 train_groundtruth_img_path_list = sorted(glob(train_data_path+"*-*-groundtruth.jpg"))
 train_data_img_path_list, train_groundtruth_img_path_list = shuffle(train_data_img_path_list, train_groundtruth_img_path_list, random_state=0)
-print(len(train_data_img_path_list)); print(len(train_groundtruth_img_path_list))
-print(train_data_img_path_list[:2])
-print(train_groundtruth_img_path_list[:2])
 
+# TRAIN Dataloader
 train_dataset=tf.data.Dataset.from_tensor_slices((train_data_img_path_list,train_groundtruth_img_path_list))
 train_dataset=train_dataset.map(load_image_groundtruth,num_parallel_calls=tf.data.experimental.AUTOTUNE)
 train_dataset = train_dataset.shuffle(buffer_size=1300).prefetch(BATCH_SIZE).batch(BATCH_SIZE)
-  
+
+print(f"\nnumber of train images: {len(train_data_img_path_list)}")
+print(f"number of train masks: {len(train_groundtruth_img_path_list)}")
+
+print(f"\n# make sure that img-list and mask-list for train samples is in order\n")
+print(train_data_img_path_list[:2])
+print(train_groundtruth_img_path_list[:2])
+
 valid_data_img_path_list = sorted(glob(valid_data_path+"*-*-img.jpg"))
 valid_groundtruth_img_path_list = sorted(glob(valid_data_path+"*-*-groundtruth.jpg"))
-print(len(valid_data_img_path_list)); print(len(valid_groundtruth_img_path_list))
-print(valid_data_img_path_list[:2])
-print(valid_groundtruth_img_path_list[:2])
 
+# VAL Dataloader
 val_dataset=tf.data.Dataset.from_tensor_slices((valid_data_img_path_list,valid_groundtruth_img_path_list))
 val_dataset=val_dataset.map(load_image_groundtruth,num_parallel_calls=tf.data.experimental.AUTOTUNE)
 val_dataset = val_dataset.shuffle(buffer_size=1300).prefetch(BATCH_SIZE).batch(BATCH_SIZE)
 
-# define the model under eager mode
-class LinearTransform(tf.keras.Model):
-  def __init__(self, name="LinearTransform"):
-    super(LinearTransform, self).__init__(self,name=name)
+print(f"\nnumber of validation/test images: {len(valid_data_img_path_list)}")
+print(f"number of validation/test masks: {len(valid_groundtruth_img_path_list)}")
+print(f"\n# make sure that img-list and mask-list for valid/test samples is in order\n")
+print(valid_data_img_path_list[:2])
+print(valid_groundtruth_img_path_list[:2])
 
-    self.conv_r=Conv2D(1,kernel_size=3,strides=1,padding='same',use_bias=False)
-    self.conv_g=Conv2D(1,kernel_size=3,strides=1,padding='same',use_bias=False)
-    self.conv_b=Conv2D(1,kernel_size=3,strides=1,padding='same',use_bias=False)
+class custom1(tf.keras.Model):
+    def __init__(self):
+        super(custom1, self).__init__()
 
-    self.pool_rc=AveragePooling2D(pool_size=(patch_size,patch_size),strides=1)
-    self.pool_gc=AveragePooling2D(pool_size=(patch_size,patch_size),strides=1)
-    self.pool_bc=AveragePooling2D(pool_size=(patch_size,patch_size),strides=1)
+        # Define the encoder layers
+        self.encoder_conv_init=Conv2D(1, 3, activation='relu', padding='same')
+        #self.encoder_conv_init=LinearTransform()
+        #self.encoder_conv1 = ResBlock(32,residual_path=True)
+        self.encoder_conv1 = Conv2D(64, 3, activation='relu', padding='same')
+        #self.encoder_conv2 = ResBlock(64,residual_path=True)
+        self.encoder_conv2 = Conv2D(64, 3, activation='relu', padding='same')
+        self.encoder_conv3 = Conv2DTranspose(filters=32, kernel_size=(3, 3), strides=(2, 2), padding='same')
+        self.encoder_conv4 = Conv2D(32, 3, activation='relu', padding='same')
+        self.encoder_conv5 = Conv2D(32, 3, activation='relu', padding='same')
+        self.encoder_conv6 = Conv2D(64, 3, (2, 2), activation='relu', padding='same')
+        self.encoder_conv7 = Conv2D(64, 3, activation='relu', padding='same')
+        #self.encoder_conv8 = ResBlock(64,residual_path=True)
+        self.encoder_conv8 = Conv2D(64, 3, activation='relu', padding='same')
+        self.encoder_conv9 = Conv2D(128, 3, (2, 2), activation='relu', padding='same')
+        self.encoder_conv10 = Conv2D(128, 3, activation='relu', padding='same')
+        self.encoder_conv11 = Conv2D(128, 3, activation='relu', padding='same')
+        self.encoder_conv12 = Conv2DTranspose(filters=64, kernel_size=(3, 3), strides=(2, 2), padding='same')
+        self.encoder_conv13 = Conv2D(32, 3, activation='relu', padding='same')
+        self.encoder_conv14 = Conv2D(32, 3, activation='relu', padding='same')
+        self.encoder_conv15 = Conv2D(1, 1, activation='relu', padding='same')   
+        self.final = Activation('tanh')
 
-    self.bn=BatchNormalization()
-    self.sigmoid=Activation('sigmoid')
-    self.softmax=Activation('softmax')
-
-  def call(self, input,training=True):
-    r,g,b=input[:,:,:,0:1],input[:,:,:,1:2],input[:,:,:,2:3]
-
-    rs=self.conv_r(r)
-    gs=self.conv_g(g)
-    bs=self.conv_r(b)
-
-    rc=tf.reshape(self.pool_rc(rs),[-1,1])
-    gc=tf.reshape(self.pool_gc(gs),[-1,1])
-    bc=tf.reshape(self.pool_bc(bs),[-1,1])
-
-    merge=Concatenate(axis=-1)([rc,gc,bc])
-    merge=tf.expand_dims(merge,axis=1)
-    merge=tf.expand_dims(merge,axis=1)
-    merge=self.softmax(merge)
-    merge=tf.repeat(merge,repeats=48,axis=2)
-    merge=tf.repeat(merge,repeats=48,axis=1)
-
-    r=r*(1+self.sigmoid(rs))
-    g=g*(1+self.sigmoid(gs))
-    b=b*(1+self.sigmoid(bs))
-
-    output=self.bn(merge[:,:,:,0:1]*r+merge[:,:,:,1:2]*g+merge[:,:,:,2:3]*b,training=training)
-    return output
-
-class ResBlock(tf.keras.Model):
-  def __init__(self,out_ch,residual_path=False,stride=1):
-    super(ResBlock,self).__init__(self)
-    self.residual_path=residual_path
-
-    self.conv1=Conv2D(out_ch,kernel_size=3,strides=stride,padding='same', use_bias=False,data_format="channels_last")
-    self.bn1=BatchNormalization()
-    self.relu1=LeakyReLU()#Activation('leaky_relu')
-
-    self.conv2=Conv2D(out_ch,kernel_size=3,strides=1,padding='same', use_bias=False,data_format="channels_last")
-    self.bn2=BatchNormalization()
-
-    if residual_path:
-      self.conv_shortcut=Conv2D(out_ch,kernel_size=1,strides=stride,padding='same',use_bias=False)
-      self.bn_shortcut=BatchNormalization()
-
-    self.relu2=LeakyReLU()#Activation('leaky_relu')
-
-  def call(self,x,training=True):
-    xs=self.relu1(self.bn1(self.conv1(x),training=training))
-    xs=self.bn2(self.conv2(xs),training=training)
-
-    if self.residual_path:
-      x=self.bn_shortcut(self.conv_shortcut(x),training=training)
-    #print(x.shape,xs.shape)
-    xs=x+xs
-    return self.relu2(xs)
+    def call(self, x, training=True):
+        # Encoder
+        x_linear=self.encoder_conv_init(x, training=training)
+        ed = self.encoder_conv1(x_linear, training=training)
+        eds1 = self.encoder_conv2(ed, training=training)
+        ed = self.encoder_conv3(eds1, training=training)
+        ed = self.encoder_conv4(ed, training=training)
+        ed = self.encoder_conv5(ed, training=training)
+        ed = self.encoder_conv6(ed, training=training)
+        ed = Concatenate(axis=3)([ed,eds1])
+        ed = self.encoder_conv7(ed, training=training)
+        eds2 = self.encoder_conv8(ed, training=training)
+        ed = self.encoder_conv9(eds2, training=training)
+        ed = self.encoder_conv10(ed, training=training)
+        ed = self.encoder_conv11(ed, training=training)
+        ed = self.encoder_conv12(ed, training=training)
+        ed = Concatenate(axis=3)([ed,eds2])
+        ed = self.encoder_conv13(ed, training=training)
+        ed = self.encoder_conv14(ed, training=training)
+        ed = self.encoder_conv15(ed, training=training)
+        seg_result = self.final(ed, training=training)
 
 
-class Unet(tf.keras.Model):
-  def __init__(self):
-    super(Unet,self).__init__(self)
-    #self.conv_init=LinearTransform()
-    self.conv_init=Conv2D(1,kernel_size=3,strides=1,padding='same',use_bias=False)
-    self.resinit=ResBlock(16,residual_path=True)
-    self.up_sample=UpSampling2D(size=(2,2),interpolation='bilinear')
-    self.resup=ResBlock(32,residual_path=True)
-
-    self.pool1=MaxPool2D(pool_size=(2,2))
-
-    self.resblock_down1=ResBlock(64,residual_path=True)
-    self.resblock_down11=ResBlock(64,residual_path=False)
-    self.pool2=MaxPool2D(pool_size=(2,2))
-
-    self.resblock_down2=ResBlock(128,residual_path=True)
-    self.resblock_down21=ResBlock(128,residual_path=False)
-    self.pool3=MaxPool2D(pool_size=(2,2))
-
-    self.resblock_down3=ResBlock(256,residual_path=True)
-    self.resblock_down31=ResBlock(256,residual_path=False)
-    self.pool4=MaxPool2D(pool_size=(2,2))
-
-    self.resblock=ResBlock(512,residual_path=True)
-
-    self.unpool3=UpSampling2D(size=(2,2),interpolation='bilinear')
-    self.resblock_up3=ResBlock(256,residual_path=True)
-    self.resblock_up31=ResBlock(256,residual_path=False)
-
-    self.unpool2=UpSampling2D(size=(2,2),interpolation='bilinear')
-    self.resblock_up2=ResBlock(128,residual_path=True)
-    self.resblock_up21=ResBlock(128,residual_path=False)
-
-    self.unpool1=UpSampling2D(size=(2,2),interpolation='bilinear')
-    self.resblock_up1=ResBlock(64,residual_path=True)
-
-    self.unpool_final=UpSampling2D(size=(2,2),interpolation='bilinear')
-    self.resblock2=ResBlock(32,residual_path=True)
-
-    self.pool_final=MaxPool2D(pool_size=(2,2))
-    self.resfinal=ResBlock(32)
-
-    self.conv_final=Conv2D(1,kernel_size=1,strides=1,padding='same',use_bias=False)
-    self.bn_final=BatchNormalization()
-    self.act=Activation('sigmoid')
-
-  def call(self,x,training=True):
-    #x_linear=self.conv_init(x,training=training)
-    x_linear=self.conv_init(x, training=training)
-    x=self.resinit(x_linear,training=training)
-    x=self.up_sample(x)
-    x=self.resup(x,training=training)
-
-    stage1=self.pool1(x)
-    stage1=self.resblock_down1(stage1,training=training)
-    stage1=self.resblock_down11(stage1,training=training)
-
-    stage2=self.pool2(stage1)
-    stage2=self.resblock_down2(stage2,training=training)
-    stage2=self.resblock_down21(stage2,training=training)
-
-    stage3=self.pool3(stage2)
-    stage3=self.resblock_down3(stage3,training=training)
-    stage3=self.resblock_down31(stage3,training=training)
-
-    stage4=self.pool4(stage3)
-    stage4=self.resblock(stage4,training=training)
-
-    stage3=Concatenate(axis=3)([stage3,self.unpool3(stage4)])
-    stage3=self.resblock_up3(stage3,training=training)
-    stage3=self.resblock_up31(stage3,training=training)
-
-    stage2=Concatenate(axis=3)([stage2,self.unpool2(stage3)])
-    stage2=self.resblock_up2(stage2,training=training)
-    stage2=self.resblock_up21(stage2,training=training)
-
-    stage1=Concatenate(axis=3)([stage1,self.unpool1(stage2)])
-    stage1=self.resblock_up1(stage1,training=training)
-
-    x=Concatenate(axis=3)([x,self.unpool_final(stage1)])
-    x=self.resblock2(x,training=training)
-
-    x=self.pool_final(x)
-    x=self.resfinal(x,training=training)
-
-    seg_result=self.act(self.bn_final(self.conv_final(x),training=training))
-
-    return x_linear,seg_result
-
+        return x_linear,seg_result
 
 checkpoint_dir=dataset_path+"ckpt/"
 #log_path=dataset_path+"logs/"
@@ -445,9 +428,7 @@ def focal_loss(y_true, y_pred, alpha=alpha, gamma=gamma):
     focalloss = -tf.reduce_sum(alpha * tf.pow(1 - pt, gamma) * tf.math.log(pt))
     return focalloss
 
-
-model=Unet()
-
+model=custom1()
 
 # Learning rate and optimizer
 cosine_decay = tf.keras.experimental.CosineDecayRestarts(initial_learning_rate=LR, first_decay_steps=12000,t_mul=1000,m_mul=0.5,alpha=1e-5)
@@ -527,7 +508,6 @@ def val_step(step,patch,groundtruth):
   #tf.summary.image("groundtruth",groundtruth*255,step=step)
   #tf.summary.image("pred",pred_seg,step=step)
   #log_writer.flush()
-  
 
 BATCH_SIZE=2
 # check here:
@@ -685,3 +665,4 @@ for epoch in range(EPOCHS):
   if (epoch+1)-best_epoch >= early_stopping:
     print(f"\n No improvements in metrics for {early_stopping} epochs. Early stopping")
 print(f"\nend of training\n")
+

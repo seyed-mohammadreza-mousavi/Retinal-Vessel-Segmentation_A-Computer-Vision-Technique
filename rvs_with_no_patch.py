@@ -46,7 +46,7 @@ BATCH_SIZE=10
 num_augmentations_per_image_for_train = 350  # Specify the number of augmentations per image
 num_augmentations_per_image_valid = 150
 
-patch_size=48        # patch image size
+patch_size=448        # patch image size
 patch_num=1500        # sample number of one training image
 #patch_num=15        # sample number of one training image
 patch_threshold=25   # threshold for the patch, the smaller threshoold, the less vessel in the patch
@@ -167,7 +167,7 @@ for i in tqdm(range(len(test_image_path_list)), desc="preprocessing the validati
 def load_image_groundtruth(img_path,groundtruth_path):
   img=tf.io.read_file(img_path)
   img=tf.image.decode_jpeg(img,channels=3)
-  img=tf.image.resize(img,[48,48])
+  img=tf.image.resize(img,[patch_size,patch_size])
 
   groundtruth=tf.io.read_file(groundtruth_path)
   groundtruth=tf.image.decode_jpeg(groundtruth,channels=1)
@@ -179,8 +179,8 @@ def load_image_groundtruth(img_path,groundtruth_path):
 #     seeds=random.uniform(0,1)
 #     img=tf.image.central_crop(img,seeds)
 #     groundtruth=tf.image.central_crop(groundtruth,seeds)
-  img=tf.image.resize(img,[48,48])
-  groundtruth=tf.image.resize(groundtruth,[48,48])
+  img=tf.image.resize(img,[patch_size,patch_size])
+  groundtruth=tf.image.resize(groundtruth,[patch_size,patch_size])
   img/=255.0
   groundtruth=(groundtruth+40)/255.0
   groundtruth=tf.cast(groundtruth,dtype=tf.uint8)
@@ -212,11 +212,11 @@ def custom_data_generator(image, groundtruth):
 
 t_img_lbl_pair=list(zip(train_images_preprocessed, train_groundtruth))
 
-print(f"Augmenting process takes a little time. Be patient\n")
+print(f"\nAugmenting process takes a little time. Be patient\n")
 # Create a list to store augmented images
 t_augmented_pairs = []
 # Apply augmentations to each image in the dataset
-for i, j in tqdm(t_img_lbl_pair, "Augmenting training_data "):
+for i, j in tqdm(t_img_lbl_pair, f"Augmenting training_data (creating {num_augmentations_per_image_for_train} samples from every train_data): "):
     t_augmented_pairs.append((i, j))
     for _ in range(num_augmentations_per_image_for_train):
         image = tf.expand_dims(i, axis=0)
@@ -232,7 +232,7 @@ v_img_lbl_pair=list(zip(valid_images_preprocessed, valid_groundtruth))
 v_augmented_pairs = []
 # num_augmentations_per_image_valid = 2
 # Apply augmentations to each image in the dataset
-for i, j in tqdm(v_img_lbl_pair, "Augmenting validation_data "):
+for i, j in tqdm(v_img_lbl_pair, f"Augmenting validation_data (creating {num_augmentations_per_image_valid} samples from every valid/test data): "):
     v_augmented_pairs.append((i, j))
     for _ in range(num_augmentations_per_image_valid):
         image = tf.expand_dims(i, axis=0)

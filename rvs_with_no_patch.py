@@ -142,6 +142,7 @@ for i in tqdm(range(len(train_image_path_list)), desc="preprocessing the trainin
   #groundtruth=tf.convert_to_tensor((groundtruth/255.0).astype(np.uint8))
   #groundtruth = distortion_free_resize(groundtruth, (448, 448))
   train_images_preprocessed.append(image);train_groundtruth.append(groundtruth)
+
 valid_data_path = "DRIVE/training/valid_data/"
 valid_images_preprocessed = []; valid_groundtruth = []
 for i in tqdm(range(len(test_image_path_list)), desc="preprocessing the validation/test images: "):

@@ -32,6 +32,7 @@ import tensorflow as tf
 from tensorflow.keras import backend as K
 from tensorflow.keras.layers import concatenate, MaxPooling2D, DepthwiseConv2D, AveragePooling2D,Conv2DTranspose,Input,Add,Conv2D, BatchNormalization,LeakyReLU, Activation, MaxPool2D, Dropout, Flatten, Dense,UpSampling2D,Concatenate,Softmax, Layer
 from tensorflow.keras.models import Model
+from tensorflow.keras.layers import DepthwiseConv2D
 
 %matplotlib inline
 
@@ -336,8 +337,8 @@ class LinearTransform(tf.keras.Model):
     merge=tf.expand_dims(merge,axis=1)
     merge=tf.expand_dims(merge,axis=1)
     merge=self.softmax(merge)
-    merge=tf.repeat(merge,repeats=48,axis=2)
-    merge=tf.repeat(merge,repeats=48,axis=1)
+    merge=tf.repeat(merge,repeats=patch_size,axis=2)
+    merge=tf.repeat(merge,repeats=patch_size,axis=1)
 
     r=r*(1+self.sigmoid(rs))
     g=g*(1+self.sigmoid(gs))

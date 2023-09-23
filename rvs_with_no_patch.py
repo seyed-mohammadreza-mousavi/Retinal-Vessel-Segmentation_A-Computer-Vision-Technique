@@ -1,3 +1,6 @@
+#ts = tf.data.Dataset.from_tensor_slices({'images':train_images_preprocessed, 'segmentation_masks': np.expand_dims(train_groundtruth, 3)})
+#tv = tf.data.Dataset.from_tensor_slices({'images':valid_images_preprocessed, 'segmentation_masks': np.expand_dims(valid_groundtruth, 3)})
+
 #!apt-get -qq install git
 #!git config --global user.email "mohammadreza92299@gmail.com"
 #!git config --global user.name "Seyed-Mohammadreza-Mousavi"

@@ -62,8 +62,8 @@ EPOCHS=200
 LR=0.0001
 BATCH_SIZE=10
 
-num_augmentations_per_image_for_train = 350  # Specify the number of augmentations per image
-num_augmentations_per_image_valid = 150
+num_augmentations_per_image_for_train = 2  # Specify the number of augmentations per image
+num_augmentations_per_image_valid = 2
 
 patch_size=48        # patch image size
 patch_num=1500        # sample number of one training image

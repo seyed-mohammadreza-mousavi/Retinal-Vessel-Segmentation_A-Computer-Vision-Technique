@@ -1,5 +1,4 @@
 from glob import glob
-from imports import *
 
 dataset_path='DRIVE/'   # modify the dataset_path to your own dir
 

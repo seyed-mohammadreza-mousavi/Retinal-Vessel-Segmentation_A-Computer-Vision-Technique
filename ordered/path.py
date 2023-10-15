@@ -28,7 +28,7 @@ test_image_path_list=glob(test_image_dir+"*.tif")
 
 val_image_path_list = test_image_path_list
 
-'''
+
 # delete original patch images
 if not os.path.exists(train_patch_dir):
   os.mkdir(train_patch_dir)
@@ -47,4 +47,3 @@ else:
 
 if not os.path.exists(test_save_dir):
   os.mkdir(test_save_dir)
-  '''

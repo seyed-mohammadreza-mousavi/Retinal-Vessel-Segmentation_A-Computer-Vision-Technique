@@ -1,3 +1,14 @@
+import tensorflow as tf
+from keras import Model
+from keras.layers import Conv2D, AveragePooling2D, BatchNormalization, Activation, Concatenate, LeakyReLU, MaxPool2D, UpSampling2D, Input
+from var import *
+from layers import *
+
+# Learning rate and optimizer
+cosine_decay = tf.keras.experimental.CosineDecayRestarts(initial_learning_rate=LR, first_decay_steps=12000,t_mul=1000,m_mul=0.5,alpha=1e-5)
+optimizer=tf.keras.optimizers.Adam(learning_rate=cosine_decay)
+loss=tf.keras.losses.BinaryCrossentropy(from_logits=False)
+
 class CustomModel(Model):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -119,9 +130,4 @@ x = BatchNormalization()(x)
 x = Activation('sigmoid')(x)
 
 unet_model = CustomModel(x_input, x, name="Unet")	
-
-# Learning rate and optimizer
-cosine_decay = tf.keras.experimental.CosineDecayRestarts(initial_learning_rate=LR, first_decay_steps=12000,t_mul=1000,m_mul=0.5,alpha=1e-5)
-optimizer=tf.keras.optimizers.Adam(learning_rate=cosine_decay)
-loss=tf.keras.losses.BinaryCrossentropy(from_logits=False)
 unet_model.compile(optimizer=optimizer, loss=loss)

@@ -1,3 +1,4 @@
+import tensorflow as tf
 from keras.losses import BinaryCrossentropy, mean_squared_error
 from keras.metrics import Mean, MeanAbsoluteError, BinaryCrossentropy, F1Score
 

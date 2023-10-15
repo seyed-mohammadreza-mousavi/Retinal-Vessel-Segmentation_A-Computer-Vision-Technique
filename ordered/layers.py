@@ -2,6 +2,7 @@ import tensorflow as tf
 from keras import Model
 from keras import backend as K
 from keras.layers import Conv2D, AveragePooling2D, BatchNormalization, Activation, Concatenate, LeakyReLU, MaxPool2D, UpSampling2D, Input
+from var import *
 
 class LinearTransform(tf.keras.layers.Layer):
     def __init__(self, name="LinearTransform"):

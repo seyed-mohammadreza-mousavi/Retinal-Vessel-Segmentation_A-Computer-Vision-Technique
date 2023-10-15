@@ -1,8 +1,10 @@
 import tensorflow as tf
 from keras import Model
+from keras.metrics import BinaryCrossentropy
 from keras.layers import Conv2D, AveragePooling2D, BatchNormalization, Activation, Concatenate, LeakyReLU, MaxPool2D, UpSampling2D, Input
 from var import *
 from layers import *
+from metrics import *
 
 # Learning rate and optimizer
 cosine_decay = tf.keras.experimental.CosineDecayRestarts(initial_learning_rate=LR, first_decay_steps=12000,t_mul=1000,m_mul=0.5,alpha=1e-5)

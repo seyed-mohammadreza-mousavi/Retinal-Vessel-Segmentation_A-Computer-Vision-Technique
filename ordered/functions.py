@@ -4,6 +4,7 @@ import numpy as np
 import cv2
 from sklearn.utils import shuffle
 import random
+import tensorflow as tf
 
 from var import *
 from path import *

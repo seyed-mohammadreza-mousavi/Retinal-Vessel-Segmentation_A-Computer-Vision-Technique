@@ -422,44 +422,45 @@ class Unet(tf.keras.Model):
     self.act=Activation('sigmoid')
 
   def call(self,x,training=True):
-    x_linear=self.conv_init(x,training=training)
-    x=self.resinit(x_linear,training=training)
-    x=self.up_sample(x)
-    x=self.resup(x,training=training)
+    x_linear=self.conv_init(x,training=training) # LinearTransform()
+    x=self.resinit(x_linear,training=training) # ResBlock(16,residual_path=True)
+    x=self.up_sample(x) # UpSampling2D(size=(2,2),interpolation='bilinear')
+    x=self.resup(x,training=training) # ResBlock(32,residual_path=True)
 
-    stage1=self.pool1(x)
-    stage1=self.resblock_down1(stage1,training=training)
-    stage1=self.resblock_down11(stage1,training=training)
+    stage1=self.pool1(x) # MaxPool2D(pool_size=(2,2))
+    stage1=self.resblock_down1(stage1,training=training) # ResBlock(64,residual_path=True)
+    stage1=self.resblock_down11(stage1,training=training) # ResBlock(64,residual_path=False)
 
-    stage2=self.pool2(stage1)
-    stage2=self.resblock_down2(stage2,training=training)
-    stage2=self.resblock_down21(stage2,training=training)
+    stage2=self.pool2(stage1) # MaxPool2D(pool_size=(2,2))
+    stage2=self.resblock_down2(stage2,training=training) # ResBlock(128,residual_path=True)
+    stage2=self.resblock_down21(stage2,training=training) # ResBlock(128,residual_path=False)
 
-    stage3=self.pool3(stage2)
-    stage3=self.resblock_down3(stage3,training=training)
-    stage3=self.resblock_down31(stage3,training=training)
+    stage3=self.pool3(stage2) # MaxPool2D(pool_size=(2,2))
+    stage3=self.resblock_down3(stage3,training=training) # ResBlock(256,residual_path=True)
+    stage3=self.resblock_down31(stage3,training=training) # ResBlock(256,residual_path=False)
 
-    stage4=self.pool4(stage3)
-    stage4=self.resblock(stage4,training=training)
+    stage4=self.pool4(stage3) # MaxPool2D(pool_size=(2,2))
+    stage4=self.resblock(stage4,training=training) # ResBlock(512,residual_path=True)
 
-    stage3=Concatenate(axis=3)([stage3,self.unpool3(stage4)])
-    stage3=self.resblock_up3(stage3,training=training)
-    stage3=self.resblock_up31(stage3,training=training)
+    stage3=Concatenate(axis=3)([stage3,self.unpool3(stage4)]) # unpool3=>UpSampling2D(size=(2,2),interpolation='bilinear')
+    stage3=self.resblock_up3(stage3,training=training) # ResBlock(256,residual_path=True)
+    stage3=self.resblock_up31(stage3,training=training) # ResBlock(256,residual_path=False)
 
-    stage2=Concatenate(axis=3)([stage2,self.unpool2(stage3)])
-    stage2=self.resblock_up2(stage2,training=training)
-    stage2=self.resblock_up21(stage2,training=training)
+    stage2=Concatenate(axis=3)([stage2,self.unpool2(stage3)]) # unpool2 => UpSampling2D(size=(2,2),interpolation='bilinear')
+    stage2=self.resblock_up2(stage2,training=training) # ResBlock(128,residual_path=True)
+    stage2=self.resblock_up21(stage2,training=training) # ResBlock(128,residual_path=False) 
 
-    stage1=Concatenate(axis=3)([stage1,self.unpool1(stage2)])
-    stage1=self.resblock_up1(stage1,training=training)
+    stage1=Concatenate(axis=3)([stage1,self.unpool1(stage2)]) # unpool1 =>UpSampling2D(size=(2,2),interpolation='bilinear')
+    stage1=self.resblock_up1(stage1,training=training) # ResBlock(64,residual_path=True)
 
-    x=Concatenate(axis=3)([x,self.unpool_final(stage1)])
-    x=self.resblock2(x,training=training)
+    x=Concatenate(axis=3)([x,self.unpool_final(stage1)]) # unpool_final =>  UpSampling2D(size=(2,2),interpolation='bilinear')
+    x=self.resblock2(x,training=training) # ResBlock(32,residual_path=True)
 
-    x=self.pool_final(x)
-    x=self.resfinal(x,training=training)
+    x=self.pool_final(x) # MaxPool2D(pool_size=(2,2))
+    x=self.resfinal(x,training=training) # ResBlock(32)
 
-    seg_result=self.act(self.bn_final(self.conv_final(x),training=training))
+    seg_result=self.act(self.bn_final(self.conv_final(x),training=training)) # conv_final => Conv2D(1,kernel_size=1,strides=1,padding='same',use_bias=False)
+	# bn_final => BatchNormalization(); act => Activation('sigmoid')
 
     return x_linear,seg_result
     

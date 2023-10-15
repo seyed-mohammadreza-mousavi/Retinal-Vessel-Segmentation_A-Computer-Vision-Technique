@@ -2,7 +2,6 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 import numpy as np
 import cv2
-import tensorflow as tf
 from sklearn.utils import shuffle
 import random
 

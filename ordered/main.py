@@ -4,6 +4,9 @@
 %run path.py
 %run var.py
 %run functions.py
+%run metrics.py
+%run layers.py
+%run model.py
 
 print("number of training images:",len(train_image_path_list))
 print("number of valid/test images:",len(val_image_path_list))
@@ -39,6 +42,14 @@ train_dataset = train_dataset.shuffle(buffer_size=1300).prefetch(BATCH_SIZE).bat
 val_dataset=tf.data.Dataset.from_tensor_slices((val_patch_img_path_list,val_patch_groundtruth_path_list))
 val_dataset=val_dataset.map(load_image_groundtruth,num_parallel_calls=tf.data.experimental.AUTOTUNE)
 val_dataset =val_dataset.shuffle(buffer_size=1300).prefetch(BATCH_SIZE).batch(BATCH_SIZE)
+
+unet_model.summary(line_length=130)
+
+# Training
+
+unet_model.fit(train_dataset, batch_size=BATCH_SIZE, validation_data=val_dataset, steps_per_epoch=10, epochs = 2)
+
+
 
 
 

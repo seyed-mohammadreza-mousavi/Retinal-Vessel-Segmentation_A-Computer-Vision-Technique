@@ -1,5 +1,6 @@
 from glob import glob
 import os
+import shutil
 
 dataset_path='DRIVE/'   # modify the dataset_path to your own dir
 

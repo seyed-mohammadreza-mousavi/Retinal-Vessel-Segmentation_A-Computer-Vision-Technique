@@ -6,7 +6,6 @@ import tensorflow as tf
 from sklearn.utils import shuffle
 import random
 
-import os
 import shutil
 
 from var import *

@@ -75,8 +75,8 @@ class CustomModel(Model):
           self.val_prec_metric.update_state(y, y_pred)
           self.val_se_metric.update_state(y, y_pred)
 
-          return {"Bce": self.val_bce_metric.result(), "F1_score": self.val_f1_metric.result(), "Prec": self.val_prec_metric.result(),
-                  "Se": self.val_se_metric.result(), "Sp": self.val_sp_metric.result()}
+          return {"bce": self.val_bce_metric.result(), "f1_score": self.val_f1_metric.result(), "prec": self.val_prec_metric.result(),
+                  "se": self.val_se_metric.result(), "sp": self.val_sp_metric.result()}
 
     @property
     def metrics(self):

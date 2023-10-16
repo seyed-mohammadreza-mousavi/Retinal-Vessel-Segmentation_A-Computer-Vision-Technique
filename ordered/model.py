@@ -13,29 +13,15 @@ loss=tf.keras.losses.BinaryCrossentropy(from_logits=False)
 
 class CustomModel(Model):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super(CustomModel, self).__init__(*args, **kwargs)
         self.loss = tf.keras.losses.BinaryCrossentropy(from_logits=False)
         self.optimizer=optimizer
 
         self.bce_metric = BinaryCrossentropy(name="bce")
-        self.val_bce_metric = tf.keras.metrics.BinaryCrossentropy(name="Bce")
-
-        self.f1_metric = F1Score(name="f1Score")
-        self.val_f1_metric = F1Score(name="F1score")
-
+        self.f1_metric = F1Score(name="f1_score")
         self.prec_metric = Precision(name="prec")
-        self.val_prec_metric = Precision(name="Prec")
-
         self.se_metric = Sensitivity(name="se")
-        self.val_se_metric = Sensitivity(name="Se")
-
         self.sp_metric = Specificity(name="sp")
-        self.val_sp_metric = Specificity(name="Sp")
-    
-    def compile(self, optimizer, loss):
-        super().compile()
-        self.optimizer = optimizer
-        self.loss = loss
 
     def train_step(self, data):
         x, y = data
@@ -56,27 +42,30 @@ class CustomModel(Model):
 
         # Compute our own metrics
         self.bce_metric.update_state(y, y_pred)
-        self.f1_metric.update_state(tf.cast(y, dtype=tf.float32), tf.cast(y_pred, dtype=tf.float32))
+        self.f1_metric.update_state(y, y_pred)
         self.prec_metric.update_state(y, y_pred)
         self.se_metric.update_state(y, y_pred)
         self.sp_metric.update_state(y, y_pred)
 
-        return {"bce": self.bce_metric.result(), "f1score": self.f1_metric.result(), "prec": self.prec_metric.result(),
-                "se": self.se_metric.result(), "sp": self.sp_metric.result()}
+        return {"bce": self.bce_metric.result(), "f1":self.f1_metric.result(), "prec":self.prec_metric.result(),
+        "se":self.se_metric.result(), "sp":self.sp_metric.result()}
+    
+    def test_step(self, data):
+        x, y = data
 
-        def test_step(self, data):
-          x, y = data
+        y_pred = self(x, training=False)  # Forward pass for evaluation
+        loss = self.loss(y, y_pred)
 
-          y_pred = self(x, training=False)
-          loss = self.compute_loss(y, y_pred)
-          
-          self.val_bce_metric.update_state(y, y_pred)
-          self.val_f1_metric.update_state(y, y_pred)
-          self.val_prec_metric.update_state(y, y_pred)
-          self.val_se_metric.update_state(y, y_pred)
+        # Compute metrics for evaluation
+        self.bce_metric.update_state(y, y_pred)
+        self.f1_metric.update_state(y, y_pred)
+        self.prec_metric.update_state(y, y_pred)
+        self.se_metric.update_state(y, y_pred)
+        self.sp_metric.update_state(y, y_pred)
 
-          return {"bce": self.val_bce_metric.result(), "f1_score": self.val_f1_metric.result(), "prec": self.val_prec_metric.result(),
-                  "se": self.val_se_metric.result(), "sp": self.val_sp_metric.result()}
+        return {"bce": self.bce_metric.result(), "f1":self.f1_metric.result(), "prec":self.prec_metric.result(),
+        "se":self.se_metric.result(), "sp":self.sp_metric.result()}
+
 
     @property
     def metrics(self):
@@ -85,9 +74,7 @@ class CustomModel(Model):
         # or at the start of `evaluate()`.
         # If you don't implement this property, you have to call
         # `reset_states()` yourself at the time of your choosing.
-        return [self.bce_metric, self.val_bce_metric, self.f1_metric, self.val_f1_metric,
-                self.prec_metric, self.val_prec_metric, self.se_metric, self.val_se_metric,
-                self.sp_metric, self.val_sp_metric]
+        return [self.bce_metric, self.f1_metric]
 				
 				
 x_input = Input(shape=(patch_size, patch_size, 3), name="input_img")
@@ -132,4 +119,6 @@ x = BatchNormalization()(x)
 x = Activation('sigmoid')(x)
 
 unet_model = CustomModel(x_input, x, name="Unet")	
+
+
 unet_model.compile(optimizer=optimizer, loss=loss)
